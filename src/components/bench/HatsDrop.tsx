@@ -118,7 +118,7 @@ export function HatsDrop({
           id="porch-ear"
           label="Porch ear URL"
           value={hats.porchEar}
-          placeholder="THEFILAMENT ear — EverettNC/THEFILAMENT, not Whole House"
+          placeholder="http://127.0.0.1:4850/stt"
           onChange={(porchEar) => onChange({ ...hats, porchEar })}
         />
         <Field
