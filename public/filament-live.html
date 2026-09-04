@@ -193,20 +193,20 @@
 
       let r,g,b,al;
       if(drape > 0.04){
-        r = 127 + 11*drape;
-        g = 227 + 28*drape;
-        b = 255 - 62*drape;
-        al = 0.16 + 0.42*drape;
-        x.lineWidth = f.w + 0.7*drape;
-      } else if(f.charge > 0.02){
-        r = 150 + 40*f.charge;
-        g = 220 - 8*f.charge;
-        b = 230 - 40*f.charge;
-        al = 0.14 + 0.22*f.charge;
-        x.lineWidth = f.w + 0.4*f.charge;
+        r = 127 + 8*drape;
+        g = 227 + 22*drape;
+        b = 255 - 48*drape;
+        al = 0.14 + 0.28*drape;
+        x.lineWidth = f.w + 0.45*drape;
+      } else if(f.charge > 0.04){
+        r = 140 + 18*f.charge;
+        g = 224;
+        b = 248 - 16*f.charge;
+        al = 0.13 + 0.10*f.charge;
+        x.lineWidth = f.w + 0.15*f.charge;
       } else {
         r = 127; g = 227; b = 255;
-        al = 0.11 + 0.16*pulse;
+        al = 0.12 + 0.15*pulse;
         x.lineWidth = f.w;
       }
       x.strokeStyle = `rgba(${r|0},${g|0},${b|0},${al})`;
@@ -218,13 +218,14 @@
     }
 
     const cg = x.createRadialGradient(CX,CY,0,CX,CY,R*0.14);
-    cg.addColorStop(0,'rgba(223,233,242,0.28)');
-    cg.addColorStop(0.45,'rgba(127,227,255,0.12)');
+    cg.addColorStop(0,'rgba(223,233,242,0.16)');
+    cg.addColorStop(0.45,'rgba(127,227,255,0.08)');
     cg.addColorStop(1,'rgba(127,227,255,0)');
     x.fillStyle = cg;
     x.beginPath(); x.arc(CX,CY,R*0.14,0,Math.PI*2); x.fill();
 
-    x.font = '12px ui-monospace,Menlo,monospace';
+    const wordSize = Math.max(18, Math.round(R * 0.048));
+    x.font = wordSize+'px ui-monospace,Menlo,monospace';
     for(let i=syl.length-1;i>=0;i--){
       const s = syl[i];
       s.d -= s.v;
@@ -232,30 +233,30 @@
       const sy = CY + Math.sin(s.a)*s.d;
 
       if(s.d < R*0.94 && s.d > R*0.12){
-        chargeNear(s.a, s.live ? 0.05 : 0.02);
+        chargeNear(s.a, s.live ? 0.03 : 0.012);
       }
 
       if(!s.held && s.d < R*0.94){
         s.held = true; caught++;
         scountEl.textContent = caught.toLocaleString();
-        chargeNear(s.a, 0.35);
-        labels.push({x:sx, y:sy, text:s.text, life:1.2});
+        chargeNear(s.a, 0.18);
+        labels.push({x:sx, y:sy, text:s.text, life:1.35});
       }
 
-      x.fillStyle = s.held ? 'rgba(138,255,193,0.92)' : 'rgba(223,233,242,0.75)';
-      x.beginPath(); x.arc(sx,sy, s.held?2.2:1.5, 0, Math.PI*2); x.fill();
-      x.fillStyle = s.held ? 'rgba(138,255,193,0.92)' : 'rgba(200,236,245,0.9)';
-      x.fillText(s.text, sx + 6, sy - 4);
+      x.fillStyle = s.held ? 'rgba(138,255,193,0.95)' : 'rgba(232,244,250,0.92)';
+      x.beginPath(); x.arc(sx,sy, s.held?3.2:2.4, 0, Math.PI*2); x.fill();
+      x.fillStyle = s.held ? 'rgba(180,255,220,0.96)' : 'rgba(232,244,250,0.96)';
+      x.fillText(s.text, sx + 10, sy + 5);
 
       if(s.d < R*0.10) syl.splice(i,1);
     }
 
     for(let i=labels.length-1;i>=0;i--){
       const L = labels[i];
-      L.life -= 0.005; L.y -= 0.12;
+      L.life -= 0.004; L.y -= 0.10;
       if(L.life <= 0){ labels.splice(i,1); continue; }
-      x.fillStyle = `rgba(138,255,193,${Math.min(1,L.life)*0.85})`;
-      x.fillText(L.text, L.x + 6, L.y);
+      x.fillStyle = `rgba(180,255,220,${Math.min(1,L.life)*0.88})`;
+      x.fillText(L.text, L.x + 10, L.y);
     }
 
     if(!window.filamentLive && Math.random() < 0.045) spawn();
