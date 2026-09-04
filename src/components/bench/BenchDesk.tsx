@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type DragEvent, type FormEvent } from "rea
 import { AudioLines, Film, Scissors } from "lucide-react";
 import type { BenchJob, CaseFile, VerifyReport } from "@/lib/bench/types";
 import { HatsDrop, loadHats, saveHats, takeHatsDrop } from "@/components/bench/HatsDrop";
+import { LiveEar } from "@/components/bench/LiveEar";
 import { mergeHats, parseHatsFile, type Hats } from "@/lib/bench/hats";
 import { cn, fmtTime } from "@/lib/utils";
 
@@ -195,6 +196,7 @@ export function BenchDesk() {
             />
           </section>
 
+          <LiveEar earUrl={hats.porchEar} />
           <HatsDrop hats={hats} onChange={writeHats} />
         </div>
       </div>
