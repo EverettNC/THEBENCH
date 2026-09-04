@@ -45,9 +45,8 @@
 </div>
 
 <div class="hud" id="legend">
-  <span style="background:#7fe3ff"></span>filament at rest<br>
-  <span style="background:#ffd08a"></span>electrified — carrying charge<br>
-  <span style="background:#8affc1"></span>syllable grabbed
+  <span style="background:#7fe3ff"></span>filament at rest — blue<br>
+  <span style="background:#8affc1"></span>word passing — then back to blue
 </div>
 
 <script>
@@ -142,9 +141,9 @@
       const y2 = CY + Math.sin(tipA)*f.len;
 
       if(f.charge > 0.01){
-        x.strokeStyle = `rgba(255,208,138,${0.30+0.55*f.charge})`;
-        x.lineWidth = f.w + 1.5*f.charge;
-        f.charge *= 0.93;
+        x.strokeStyle = `rgba(138,255,193,${0.16+0.28*f.charge})`;
+        x.lineWidth = f.w + 0.35*f.charge;
+        f.charge *= 0.86;
       } else {
         const g = 0.045 + 0.10*pulse;
         x.strokeStyle = `rgba(127,227,255,${g})`;

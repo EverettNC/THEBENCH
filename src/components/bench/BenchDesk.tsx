@@ -101,7 +101,7 @@ export function BenchDesk() {
       <header className="relative overflow-hidden border-b border-line bg-black">
         <iframe
           title="The Filament — housing v2"
-          src="/filament-live.html"
+          src="/filament-live.html?v=nogoal"
           allow="microphone; autoplay"
           className="block h-[min(82vh,900px)] w-full border-0 bg-black"
         />
