@@ -174,22 +174,16 @@
       const pulse=0.5+0.5*Math.sin(t*f.rate+f.ph);
       const depth=0.42+0.58*p2.d;
       let r,g,b,al;
-      if(f.charge>0.01){
-        r=138; g=255; b=193; al=(0.16+0.28*f.charge)*depth;
-        f.charge*=0.86;
-        x.lineWidth=f.w+0.35*f.charge;
+      if(f.m.n==='ado'){
+        const sh=Math.sin(t*0.7+f.iri);
+        r=232+18*sh; g=244-10*sh; b=255;
+        al=(0.030+0.085*pulse)*depth;
       }else{
-        if(f.m.n==='ado'){
-          // clear adodescent — pale, and it shifts
-          const s=Math.sin(t*0.7+f.iri);
-          r=232+18*s; g=244-10*s; b=255;
-          al=(0.030+0.085*pulse)*depth;
-        }else{
-          r=f.m.r; g=f.m.g; b=f.m.b;
-          al=(0.035+0.095*pulse)*depth;
-        }
-        x.lineWidth=f.w;
+        r=f.m.r; g=f.m.g; b=f.m.b;
+        al=(0.035+0.095*pulse)*depth;
       }
+      x.lineWidth=f.w;
+      f.charge=0;
       x.strokeStyle=`rgba(${r|0},${g|0},${b|0},${al})`;
       x.beginPath(); x.moveTo(p1.X,p1.Y); x.lineTo(p2.X,p2.Y); x.stroke();
     }
@@ -212,7 +206,7 @@
     for(let i=labels.length-1;i>=0;i--){
       const L=labels[i]; L.life-=0.008; L.y-=0.2;
       if(L.life<=0){labels.splice(i,1);continue;}
-      x.fillStyle=`rgba(255,240,205,${L.life*0.9})`;
+      x.fillStyle=`rgba(224,112,64,${L.life*0.9})`;
       x.fillText(L.text,L.x+6,L.y);
     }
 
@@ -234,13 +228,6 @@
       const p=proj(s);
       const inBarrel = Math.hypot(s.x,s.y) < RH*0.96 && Math.abs(s.z) < LH*0.95;
       if(inBarrel){
-        const sa=Math.atan2(s.y,s.x);
-        const lat=s.z/LH;
-        for(const f of fil){
-          let dd=Math.abs(((f.a+spin-sa+Math.PI*3)%(Math.PI*2))-Math.PI);
-          let zd=Math.abs(f.lat-lat);
-          if(dd<0.42 && zd<0.55) f.charge=Math.min(1, f.charge+0.09*(1-dd/0.42));
-        }
         if(!s.held){
           s.held=true; caught++; scountEl.textContent=caught.toLocaleString();
           labels.push({x:p.X,y:p.Y,text:s.text,life:1});
@@ -248,9 +235,7 @@
       }
       const size = Math.max(11, 16*p.d);
       x.font = size+'px ui-monospace,Menlo,monospace';
-      x.fillStyle = s.held
-        ? `rgba(255,236,190,${0.75+0.25*p.d})`
-        : `rgba(47,247,238,${0.50+0.45*p.d})`;
+      x.fillStyle=s.held?'rgba(224,112,64,0.95)':`rgba(223,233,242,${0.26+0.34*p.d})`;
       x.fillText(s.text, p.X, p.Y);
       if(Math.hypot(s.x,s.y)>RH*2.6 || Math.abs(s.z)>LH*2.2) syl.splice(i,1);
     }

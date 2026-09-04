@@ -6,7 +6,7 @@
 <title>The Filament — PORCH super cochlea</title>
 <style>
   :root{
-    --ink:#05070a; --wire:#7fe3ff; --hot:#ffd08a; --catch:#8affc1;
+    --ink:#05070a; --wire:#7fe3ff; --catch:#8affc1;
     --dim:#4a5a6a; --paper:#dfe9f2;
   }
   *{box-sizing:border-box}
@@ -33,7 +33,7 @@
 
 <div class="hud" id="title">
   <h1>The Filament</h1>
-  <p>Millions of micro-fibers, electrified. Everything inside fifteen feet has to come
+  <p>Millions of micro-fibers. Everything inside fifteen feet has to come
      through them. Every syllable gets grabbed — not just the ones a model was trained on.</p>
 </div>
 
@@ -140,15 +140,9 @@
       const x2 = CX + Math.cos(tipA)*f.len;
       const y2 = CY + Math.sin(tipA)*f.len;
 
-      if(f.charge > 0.01){
-        x.strokeStyle = `rgba(138,255,193,${0.16+0.28*f.charge})`;
-        x.lineWidth = f.w + 0.35*f.charge;
-        f.charge *= 0.86;
-      } else {
-        const g = 0.045 + 0.10*pulse;
-        x.strokeStyle = `rgba(127,227,255,${g})`;
-        x.lineWidth = f.w;
-      }
+      const g = 0.045 + 0.10*pulse;
+      x.strokeStyle = `rgba(127,227,255,${g})`;
+      x.lineWidth = f.w;
       x.beginPath();
       x.moveTo(x1,y1);
       x.quadraticCurveTo(mx,my,x2,y2);
@@ -157,7 +151,7 @@
 
     // ---- the core ----
     const cg = x.createRadialGradient(CX,CY,0,CX,CY,R*0.14);
-    cg.addColorStop(0,'rgba(255,240,210,0.55)');
+    cg.addColorStop(0,'rgba(223,233,242,0.22)');
     cg.addColorStop(0.4,'rgba(127,227,255,0.16)');
     cg.addColorStop(1,'rgba(127,227,255,0)');
     x.fillStyle = cg;
@@ -173,11 +167,7 @@
       if(!s.held && s.d < R*0.94){
         s.held = true; caught++;
         scountEl.textContent = caught.toLocaleString();
-        // light every fiber pointing near where it came in
-        for(const f of fil){
-          let dd = Math.abs(((f.a - s.a + Math.PI*3)%(Math.PI*2)) - Math.PI);
-          if(dd < 0.20) f.charge = Math.min(1, f.charge + (1 - dd/0.20));
-        }
+        // grab — no flash. field stays blue.
         labels.push({x:sx, y:sy, text:s.text, life:1});
       }
 
