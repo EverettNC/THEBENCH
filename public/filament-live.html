@@ -43,8 +43,9 @@
 <div class="hud" id="readout">
   <b>PORCH · super cochlea</b><br>
   radius <span class="n">15 ft</span> &nbsp;·&nbsp;
-  filaments <span class="n" id="fcount">—</span> rendered of millions &nbsp;·&nbsp;
-  syllables caught <span class="n" id="scount">0</span>
+  filaments <span class="n" id="fcount">—</span> engaged
+  of 2,600 rendered · millions in the organ &nbsp;·&nbsp;
+  caught <span class="n" id="scount">0</span>
 </div>
 
 <div class="hud" id="legend">
@@ -109,7 +110,7 @@
         wrapD: len
       });
     }
-    fcountEl.textContent = FIL.toLocaleString();
+    fcountEl.textContent = '0';
   }
 
   function spawn(forced, angle){
@@ -135,7 +136,7 @@
   };
 
   function tick(){
-    t += 0.014;
+    t += 0.018;
     x.fillStyle = 'rgba(5,7,10,0.22)';
     x.fillRect(0,0,W,H);
 
@@ -151,8 +152,8 @@
       if(s.d > R*0.12 && s.d < R*1.02){
         for(const f of fil){
           let dd = Math.abs(((f.a - s.a + Math.PI*3)%(Math.PI*2)) - Math.PI);
-          if(dd < 0.22){
-            const amt = (1 - dd/0.22) * (s.live ? 1 : 0.55);
+          if(dd < 0.38){
+            const amt = (1 - dd/0.38) * (s.live ? 1 : 0.55);
             if(amt > f.drape){
               f.drape = amt;
               f.wrapA = s.a;
@@ -166,16 +167,17 @@
     for(let i=0;i<fil.length;i++){
       const f = fil[i];
       const pulse = 0.5 + 0.5*Math.sin(t*f.rate + f.phase);
-      const live = window.filamentLive ? 1.45 : 1;
-      const sway = Math.sin(t*f.rate*0.9 + f.phase) * 0.07 * live;
-      const sway2 = Math.cos(t*f.rate*1.1 + f.phase*0.7) * 0.05 * live;
-      const a = f.a + t*0.008 + sway*0.1;
       const drape = f.drape;
-      const fold = Math.min(1, drape * 1.15);
+      const live = window.filamentLive ? 1.7 : 1.15;
+      const busy = drape > 0.04 ? 1.8 : 1;
+      const sway = Math.sin(t*f.rate*1.25 + f.phase) * 0.10 * live * busy;
+      const sway2 = Math.cos(t*f.rate*1.4 + f.phase*0.7) * 0.08 * live * busy;
+      const a = f.a + t*0.012 + sway*0.12;
+      const fold = Math.min(1, drape * 1.35);
       const restTip = a + f.curl + sway;
-      const tipA = restTip + (f.wrapA - restTip) * fold * 0.8;
-      const restLen = f.len * (1 + 0.02*pulse);
-      const over = f.wrapD * (0.72 + 0.06*pulse);
+      const tipA = restTip + (f.wrapA - restTip) * fold * 0.92;
+      const restLen = f.len * (1 + 0.03*pulse);
+      const over = f.wrapD * (0.62 + 0.08*pulse);
       const len = restLen + (over - restLen) * fold;
       const x1 = CX + Math.cos(a)*R*0.055;
       const y1 = CY + Math.sin(a)*R*0.055;
@@ -193,6 +195,10 @@
       x.quadraticCurveTo(mx,my,x2,y2);
       x.stroke();
     }
+
+    let engaged = 0;
+    for(const f of fil) if(f.drape > 0.05) engaged++;
+    fcountEl.textContent = engaged.toLocaleString();
 
     const cg = x.createRadialGradient(CX,CY,0,CX,CY,R*0.14);
     cg.addColorStop(0,'rgba(223,233,242,0.16)');
