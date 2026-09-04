@@ -156,13 +156,20 @@
     for(let i=0;i<fil.length;i++){
       const f = fil[i];
       const pulse = 0.5 + 0.5*Math.sin(t*f.rate + f.phase);
-      const tipA = f.a + f.curl;
-      const x1 = CX + Math.cos(f.a)*R*0.055;
-      const y1 = CY + Math.sin(f.a)*R*0.055;
-      const mx = CX + Math.cos(f.a + f.curl*0.4)*f.len*0.6;
-      const my = CY + Math.sin(f.a + f.curl*0.4)*f.len*0.6;
-      const x2 = CX + Math.cos(tipA)*f.len;
-      const y2 = CY + Math.sin(tipA)*f.len;
+      const live = window.filamentLive ? 1.65 : 1;
+      const whip = f.charge * 0.55;
+      const sway = Math.sin(t*f.rate*0.85 + f.phase) * (0.12 + whip) * live;
+      const sway2 = Math.cos(t*f.rate*1.15 + f.phase*0.7) * (0.08 + whip*0.5) * live;
+      const a = f.a + t*0.018 + sway*0.15;
+      const tipA = a + f.curl + sway;
+      const breathe = 1 + 0.04*pulse + whip*0.12;
+      const len = f.len * breathe;
+      const x1 = CX + Math.cos(a)*R*0.055;
+      const y1 = CY + Math.sin(a)*R*0.055;
+      const mx = CX + Math.cos(a + f.curl*0.4 + sway2)*len*0.6;
+      const my = CY + Math.sin(a + f.curl*0.4 + sway2)*len*0.6;
+      const x2 = CX + Math.cos(tipA)*len;
+      const y2 = CY + Math.sin(tipA)*len;
 
       if(f.charge > 0.01){
         x.strokeStyle = `rgba(255,208,138,${0.30+0.55*f.charge})`;
