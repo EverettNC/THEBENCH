@@ -49,7 +49,7 @@
 
 <div class="hud" id="legend">
   <span style="background:#7fe3ff"></span>filament at rest — blue<br>
-  <span style="background:#8affc1"></span>word passing — then back to blue
+  <span style="background:#5a9498"></span>word passing — dim teal, then blue
 </div>
 
 <div class="hud" id="listen">
@@ -191,11 +191,11 @@
       const y2 = CY + Math.sin(tipA)*len;
 
       const d = Math.max(0, Math.min(1, f.drape));
-      const r = 127 + (138-127)*d;
-      const g = 227 + (255-227)*d;
-      const b = 255 + (193-255)*d;
-      const al = 0.13 + 0.22*d;
-      x.lineWidth = f.w + 0.35*d;
+      const r = 127 + (90-127)*d;
+      const g = 227 + (148-227)*d;
+      const b = 255 + (152-255)*d;
+      const al = 0.10 + 0.03*d;
+      x.lineWidth = f.w;
       x.strokeStyle = `rgba(${r|0},${g|0},${b|0},${al})`;
       x.beginPath();
       x.moveTo(x1,y1);
@@ -210,28 +210,28 @@
     x.fillStyle = cg;
     x.beginPath(); x.arc(CX,CY,R*0.14,0,Math.PI*2); x.fill();
 
-    const wordSize = Math.max(18, Math.round(R * 0.048));
-    x.font = wordSize+'px ui-monospace,Menlo,monospace';
+    const wordSize = Math.max(22, Math.round(R * 0.058));
+    x.font = '600 '+wordSize+'px ui-monospace,Menlo,monospace';
+    x.lineJoin = 'round';
+    x.miterLimit = 2;
+    const halo = Math.max(4, wordSize * 0.22);
     for(let i=syl.length-1;i>=0;i--){
       const s = syl[i];
       s.d -= s.v;
       const sx = CX + Math.cos(s.a)*s.d;
       const sy = CY + Math.sin(s.a)*s.d;
 
-      if(s.d < R*0.94 && s.d > R*0.12){
-        /* color lives on drape, not charge */
-      }
-
       if(!s.held && s.d < R*0.94){
         s.held = true; caught++;
         scountEl.textContent = caught.toLocaleString();
-        labels.push({x:sx, y:sy, text:s.text, life:1.35});
+        labels.push({x:sx, y:sy, text:s.text, life:1.5});
       }
 
-      x.fillStyle = s.held ? 'rgba(138,255,193,0.95)' : 'rgba(232,244,250,0.92)';
-      x.beginPath(); x.arc(sx,sy, s.held?3.2:2.4, 0, Math.PI*2); x.fill();
-      x.fillStyle = s.held ? 'rgba(180,255,220,0.96)' : 'rgba(232,244,250,0.96)';
-      x.fillText(s.text, sx + 10, sy + 5);
+      x.strokeStyle = 'rgba(5,7,10,0.92)';
+      x.lineWidth = halo;
+      x.strokeText(s.text, sx + 8, sy + 6);
+      x.fillStyle = '#e8f4ff';
+      x.fillText(s.text, sx + 8, sy + 6);
 
       if(s.d < R*0.10) syl.splice(i,1);
     }
@@ -240,8 +240,11 @@
       const L = labels[i];
       L.life -= 0.004; L.y -= 0.10;
       if(L.life <= 0){ labels.splice(i,1); continue; }
-      x.fillStyle = `rgba(180,255,220,${Math.min(1,L.life)*0.88})`;
-      x.fillText(L.text, L.x + 10, L.y);
+      x.strokeStyle = `rgba(5,7,10,${Math.min(1,L.life)*0.85})`;
+      x.lineWidth = halo;
+      x.strokeText(L.text, L.x + 8, L.y);
+      x.fillStyle = `rgba(232,244,255,${Math.min(1,L.life)})`;
+      x.fillText(L.text, L.x + 8, L.y);
     }
 
     if(!window.filamentLive && Math.random() < 0.045) spawn();
