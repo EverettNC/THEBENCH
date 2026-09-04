@@ -103,8 +103,11 @@
         curl: (Math.random()-0.5)*0.55,
         w: 0.28 + Math.random()*0.42,
         phase: Math.random()*Math.PI*2,
-        rate: 0.6 + Math.random()*1.5,
-        charge: 0
+        rate: 0.35 + Math.random()*0.7,
+        charge: 0,
+        drape: 0,
+        wrapA: a,
+        wrapD: len
       });
     }
     fcountEl.textContent = FIL.toLocaleString();
@@ -116,7 +119,7 @@
     syl.push({
       a, d,
       text: forced || SYL[(Math.random()*SYL.length)|0],
-      v: 0.7 + Math.random()*1.1,
+      v: 0.22 + Math.random()*0.28,
       held: false, live: Boolean(forced)
     });
   }
@@ -124,7 +127,7 @@
   function chargeNear(angle, amount){
     for(const f of fil){
       let dd = Math.abs(((f.a - angle + Math.PI*3)%(Math.PI*2)) - Math.PI);
-      if(dd < 0.28) f.charge = Math.min(1, f.charge + amount * (1 - dd/0.28));
+      if(dd < 0.28) f.charge = Math.min(0.55, f.charge + amount * (1 - dd/0.28));
     }
   }
 
@@ -135,51 +138,79 @@
     const base = Math.random()*Math.PI*2;
     spawn(tok, base);
     spawn(tok, base + Math.PI);
-    spawn(tok, base + Math.PI*0.5);
-    spawn(tok, base + Math.PI*1.5);
-    spawn(tok, base + Math.PI*0.25);
-    spawn(tok, base + Math.PI*1.25);
+    spawn(tok, base + Math.PI * 0.5);
   };
 
   function tick(){
-    t += 0.016;
-    x.fillStyle = 'rgba(5,7,10,0.30)';
+    t += 0.007;
+    x.fillStyle = 'rgba(5,7,10,0.22)';
     x.fillRect(0,0,W,H);
 
     x.save();
-    x.strokeStyle = 'rgba(127,227,255,0.13)';
+    x.strokeStyle = 'rgba(127,227,255,0.18)';
     x.setLineDash([2,7]); x.lineWidth = 1;
     x.beginPath(); x.arc(CX,CY,R,0,Math.PI*2); x.stroke();
     x.setLineDash([]);
     x.restore();
 
+    for(const f of fil) f.drape *= 0.94;
+    for(const s of syl){
+      if(s.d > R*0.12 && s.d < R*1.02){
+        for(const f of fil){
+          let dd = Math.abs(((f.a - s.a + Math.PI*3)%(Math.PI*2)) - Math.PI);
+          if(dd < 0.48){
+            const amt = (1 - dd/0.48) * (s.live ? 1 : 0.4);
+            if(amt > f.drape){
+              f.drape = amt;
+              f.wrapA = s.a;
+              f.wrapD = s.d;
+            }
+          }
+        }
+      }
+    }
+
     for(let i=0;i<fil.length;i++){
       const f = fil[i];
       const pulse = 0.5 + 0.5*Math.sin(t*f.rate + f.phase);
-      const live = window.filamentLive ? 1.65 : 1;
-      const whip = f.charge * 0.55;
-      const sway = Math.sin(t*f.rate*0.85 + f.phase) * (0.12 + whip) * live;
-      const sway2 = Math.cos(t*f.rate*1.15 + f.phase*0.7) * (0.08 + whip*0.5) * live;
-      const a = f.a + t*0.018 + sway*0.15;
-      const tipA = a + f.curl + sway;
-      const breathe = 1 + 0.04*pulse + whip*0.12;
-      const len = f.len * breathe;
+      const live = window.filamentLive ? 1.12 : 1;
+      const sway = Math.sin(t*f.rate*0.55 + f.phase) * 0.045 * live;
+      const sway2 = Math.cos(t*f.rate*0.7 + f.phase*0.7) * 0.03 * live;
+      const a = f.a + t*0.004 + sway*0.08;
+      const drape = f.drape;
+      const fold = drape * drape;
+      const restTip = a + f.curl + sway;
+      const tipA = restTip + (f.wrapA - restTip) * fold * 0.55;
+      const restLen = f.len * (1 + 0.025*pulse);
+      const over = f.wrapD * (0.82 + 0.08*pulse);
+      const len = restLen + (over - restLen) * fold;
       const x1 = CX + Math.cos(a)*R*0.055;
       const y1 = CY + Math.sin(a)*R*0.055;
-      const mx = CX + Math.cos(a + f.curl*0.4 + sway2)*len*0.6;
-      const my = CY + Math.sin(a + f.curl*0.4 + sway2)*len*0.6;
+      const mx = CX + Math.cos(a + f.curl*0.35 + sway2)* (len * (0.52 + 0.18*fold));
+      const my = CY + Math.sin(a + f.curl*0.35 + sway2)* (len * (0.52 + 0.18*fold));
       const x2 = CX + Math.cos(tipA)*len;
       const y2 = CY + Math.sin(tipA)*len;
 
-      if(f.charge > 0.01){
-        x.strokeStyle = `rgba(255,208,138,${0.30+0.55*f.charge})`;
-        x.lineWidth = f.w + 1.5*f.charge;
-        f.charge *= 0.93;
+      let r,g,b,al;
+      if(drape > 0.04){
+        r = 127 + 11*drape;
+        g = 227 + 28*drape;
+        b = 255 - 62*drape;
+        al = 0.16 + 0.42*drape;
+        x.lineWidth = f.w + 0.7*drape;
+      } else if(f.charge > 0.02){
+        r = 150 + 40*f.charge;
+        g = 220 - 8*f.charge;
+        b = 230 - 40*f.charge;
+        al = 0.14 + 0.22*f.charge;
+        x.lineWidth = f.w + 0.4*f.charge;
       } else {
-        const g = 0.045 + 0.10*pulse;
-        x.strokeStyle = `rgba(127,227,255,${g})`;
+        r = 127; g = 227; b = 255;
+        al = 0.11 + 0.16*pulse;
         x.lineWidth = f.w;
       }
+      x.strokeStyle = `rgba(${r|0},${g|0},${b|0},${al})`;
+      f.charge *= 0.97;
       x.beginPath();
       x.moveTo(x1,y1);
       x.quadraticCurveTo(mx,my,x2,y2);
@@ -187,8 +218,8 @@
     }
 
     const cg = x.createRadialGradient(CX,CY,0,CX,CY,R*0.14);
-    cg.addColorStop(0,'rgba(255,240,210,0.55)');
-    cg.addColorStop(0.4,'rgba(127,227,255,0.16)');
+    cg.addColorStop(0,'rgba(223,233,242,0.28)');
+    cg.addColorStop(0.45,'rgba(127,227,255,0.12)');
     cg.addColorStop(1,'rgba(127,227,255,0)');
     x.fillStyle = cg;
     x.beginPath(); x.arc(CX,CY,R*0.14,0,Math.PI*2); x.fill();
@@ -201,19 +232,19 @@
       const sy = CY + Math.sin(s.a)*s.d;
 
       if(s.d < R*0.94 && s.d > R*0.12){
-        chargeNear(s.a, s.live ? 0.18 : 0.06);
+        chargeNear(s.a, s.live ? 0.05 : 0.02);
       }
 
       if(!s.held && s.d < R*0.94){
         s.held = true; caught++;
         scountEl.textContent = caught.toLocaleString();
-        chargeNear(s.a, 1);
-        labels.push({x:sx, y:sy, text:s.text, life:1});
+        chargeNear(s.a, 0.35);
+        labels.push({x:sx, y:sy, text:s.text, life:1.2});
       }
 
-      x.fillStyle = s.held ? 'rgba(138,255,193,0.95)' : 'rgba(223,233,242,0.7)';
-      x.beginPath(); x.arc(sx,sy, s.held?2.4:1.6, 0, Math.PI*2); x.fill();
-      x.fillStyle = s.held ? 'rgba(138,255,193,0.95)' : 'rgba(127,227,255,0.88)';
+      x.fillStyle = s.held ? 'rgba(138,255,193,0.92)' : 'rgba(223,233,242,0.75)';
+      x.beginPath(); x.arc(sx,sy, s.held?2.2:1.5, 0, Math.PI*2); x.fill();
+      x.fillStyle = s.held ? 'rgba(138,255,193,0.92)' : 'rgba(200,236,245,0.9)';
       x.fillText(s.text, sx + 6, sy - 4);
 
       if(s.d < R*0.10) syl.splice(i,1);
@@ -221,13 +252,13 @@
 
     for(let i=labels.length-1;i>=0;i--){
       const L = labels[i];
-      L.life -= 0.009; L.y -= 0.22;
+      L.life -= 0.005; L.y -= 0.12;
       if(L.life <= 0){ labels.splice(i,1); continue; }
-      x.fillStyle = `rgba(138,255,193,${L.life*0.9})`;
+      x.fillStyle = `rgba(138,255,193,${Math.min(1,L.life)*0.85})`;
       x.fillText(L.text, L.x + 6, L.y);
     }
 
-    if(!window.filamentLive && Math.random() < 0.12) spawn();
+    if(!window.filamentLive && Math.random() < 0.045) spawn();
     requestAnimationFrame(tick);
   }
 
