@@ -48,8 +48,8 @@
 </div>
 
 <div class="hud" id="legend">
-  <span style="background:#7fe3ff"></span>filament at rest — blue<br>
-  <span style="background:#5a9498"></span>word passing — dim teal, then blue
+  <span style="background:#7fe3ff"></span>filament — always blue<br>
+  <span style="background:#e07040"></span>words — cayenne, through the wash
 </div>
 
 <div class="hud" id="listen">
@@ -191,12 +191,9 @@
       const y2 = CY + Math.sin(tipA)*len;
 
       const d = Math.max(0, Math.min(1, f.drape));
-      const r = 127 + (90-127)*d;
-      const g = 227 + (148-227)*d;
-      const b = 255 + (152-255)*d;
-      const al = 0.10 + 0.03*d;
+      const pulseA = 0.10 + 0.04*pulse;
       x.lineWidth = f.w;
-      x.strokeStyle = `rgba(${r|0},${g|0},${b|0},${al})`;
+      x.strokeStyle = `rgba(127,227,255,${pulseA})`;
       x.beginPath();
       x.moveTo(x1,y1);
       x.quadraticCurveTo(mx,my,x2,y2);
@@ -230,7 +227,7 @@
       x.strokeStyle = 'rgba(5,7,10,0.92)';
       x.lineWidth = halo;
       x.strokeText(s.text, sx + 8, sy + 6);
-      x.fillStyle = '#e8f4ff';
+      x.fillStyle = '#e07040';
       x.fillText(s.text, sx + 8, sy + 6);
 
       if(s.d < R*0.10) syl.splice(i,1);
@@ -243,7 +240,7 @@
       x.strokeStyle = `rgba(5,7,10,${Math.min(1,L.life)*0.85})`;
       x.lineWidth = halo;
       x.strokeText(L.text, L.x + 8, L.y);
-      x.fillStyle = `rgba(232,244,255,${Math.min(1,L.life)})`;
+      x.fillStyle = `rgba(224,112,64,${Math.min(1,L.life)})`;
       x.fillText(L.text, L.x + 8, L.y);
     }
 
