@@ -168,7 +168,8 @@ export function LiveEar({ earUrl }: { earUrl: string }) {
       </div>
       <p className="mt-2 font-display text-2xl italic text-fg">Real time. As said.</p>
       <p className="mt-1 max-w-md text-sm text-muted">
-        Mic to Filament on 4850. Porch keeps dialect. Empty ear stays empty.
+        The cochlea is <a className="text-accent underline" href="http://127.0.0.1:4850">http://127.0.0.1:4850</a>
+        — housing v2, copper / Tiffany / adodescent. This desk is the bag. 4850 is the face.
       </p>
       <div className="mt-4 flex flex-wrap items-center gap-3">
         <button
