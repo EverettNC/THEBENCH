@@ -49,7 +49,7 @@
 
 <div class="hud" id="legend">
   <span style="background:#7fe3ff"></span>filament — always blue<br>
-  <span style="background:#e07040"></span>words — cayenne, through the wash
+  <span style="background:#dfe9f2"></span>only words that were said
 </div>
 
 <div class="hud" id="listen">
@@ -113,21 +113,16 @@
   }
 
   function spawn(forced, angle){
+    const tok = String(forced || "").trim();
+    if(!tok) return;
     const a = angle ?? Math.random()*Math.PI*2;
-    const d = R*(1.02 + Math.random()*0.22);
+    const d = R*(1.02 + Math.random()*0.18);
     syl.push({
       a, d,
-      text: forced || SYL[(Math.random()*SYL.length)|0],
-      v: 0.22 + Math.random()*0.28,
-      held: false, live: Boolean(forced)
+      text: tok,
+      v: 0.48 + Math.random()*0.32,
+      held: false, live: true
     });
-  }
-
-  function chargeNear(angle, amount){
-    for(const f of fil){
-      let dd = Math.abs(((f.a - angle + Math.PI*3)%(Math.PI*2)) - Math.PI);
-      if(dd < 0.28) f.charge = Math.min(0.55, f.charge + amount * (1 - dd/0.28));
-    }
   }
 
   window.filamentCatch = function(text){
@@ -136,12 +131,11 @@
     if(!tok) return;
     const base = Math.random()*Math.PI*2;
     spawn(tok, base);
-    spawn(tok, base + Math.PI);
     spawn(tok, base + Math.PI * 0.5);
   };
 
   function tick(){
-    t += 0.007;
+    t += 0.014;
     x.fillStyle = 'rgba(5,7,10,0.22)';
     x.fillRect(0,0,W,H);
 
@@ -152,7 +146,7 @@
     x.setLineDash([]);
     x.restore();
 
-    for(const f of fil) f.drape *= 0.86;
+    for(const f of fil) f.drape *= 0.78;
     for(const s of syl){
       if(s.d > R*0.12 && s.d < R*1.02){
         for(const f of fil){
@@ -172,16 +166,16 @@
     for(let i=0;i<fil.length;i++){
       const f = fil[i];
       const pulse = 0.5 + 0.5*Math.sin(t*f.rate + f.phase);
-      const live = window.filamentLive ? 1.12 : 1;
-      const sway = Math.sin(t*f.rate*0.55 + f.phase) * 0.045 * live;
-      const sway2 = Math.cos(t*f.rate*0.7 + f.phase*0.7) * 0.03 * live;
-      const a = f.a + t*0.004 + sway*0.08;
+      const live = window.filamentLive ? 1.45 : 1;
+      const sway = Math.sin(t*f.rate*0.9 + f.phase) * 0.07 * live;
+      const sway2 = Math.cos(t*f.rate*1.1 + f.phase*0.7) * 0.05 * live;
+      const a = f.a + t*0.008 + sway*0.1;
       const drape = f.drape;
-      const fold = drape * drape;
+      const fold = Math.min(1, drape * 1.15);
       const restTip = a + f.curl + sway;
-      const tipA = restTip + (f.wrapA - restTip) * fold * 0.55;
-      const restLen = f.len * (1 + 0.025*pulse);
-      const over = f.wrapD * (0.82 + 0.08*pulse);
+      const tipA = restTip + (f.wrapA - restTip) * fold * 0.8;
+      const restLen = f.len * (1 + 0.02*pulse);
+      const over = f.wrapD * (0.72 + 0.06*pulse);
       const len = restLen + (over - restLen) * fold;
       const x1 = CX + Math.cos(a)*R*0.055;
       const y1 = CY + Math.sin(a)*R*0.055;
@@ -207,11 +201,11 @@
     x.fillStyle = cg;
     x.beginPath(); x.arc(CX,CY,R*0.14,0,Math.PI*2); x.fill();
 
-    const wordSize = Math.max(22, Math.round(R * 0.058));
-    x.font = '600 '+wordSize+'px ui-monospace,Menlo,monospace';
+    const wordSize = Math.max(11, Math.round(R * 0.028));
+    x.font = wordSize+'px ui-monospace,Menlo,monospace';
     x.lineJoin = 'round';
     x.miterLimit = 2;
-    const halo = Math.max(4, wordSize * 0.22);
+    const halo = Math.max(3, wordSize * 0.2);
     for(let i=syl.length-1;i>=0;i--){
       const s = syl[i];
       s.d -= s.v;
@@ -221,36 +215,34 @@
       if(!s.held && s.d < R*0.94){
         s.held = true; caught++;
         scountEl.textContent = caught.toLocaleString();
-        labels.push({x:sx, y:sy, text:s.text, life:1.5});
+        labels.push({x:sx, y:sy, text:s.text, life:1.1});
       }
 
-      x.strokeStyle = 'rgba(5,7,10,0.92)';
+      x.strokeStyle = 'rgba(5,7,10,0.9)';
       x.lineWidth = halo;
-      x.strokeText(s.text, sx + 8, sy + 6);
-      x.fillStyle = '#e07040';
-      x.fillText(s.text, sx + 8, sy + 6);
+      x.strokeText(s.text, sx + 6, sy + 4);
+      x.fillStyle = '#dfe9f2';
+      x.fillText(s.text, sx + 6, sy + 4);
 
       if(s.d < R*0.10) syl.splice(i,1);
     }
 
     for(let i=labels.length-1;i>=0;i--){
       const L = labels[i];
-      L.life -= 0.004; L.y -= 0.10;
+      L.life -= 0.006; L.y -= 0.12;
       if(L.life <= 0){ labels.splice(i,1); continue; }
-      x.strokeStyle = `rgba(5,7,10,${Math.min(1,L.life)*0.85})`;
+      x.strokeStyle = `rgba(5,7,10,${Math.min(1,L.life)*0.8})`;
       x.lineWidth = halo;
-      x.strokeText(L.text, L.x + 8, L.y);
-      x.fillStyle = `rgba(224,112,64,${Math.min(1,L.life)})`;
-      x.fillText(L.text, L.x + 8, L.y);
+      x.strokeText(L.text, L.x + 6, L.y);
+      x.fillStyle = `rgba(223,233,242,${Math.min(1,L.life)})`;
+      x.fillText(L.text, L.x + 6, L.y);
     }
 
-    if(!window.filamentLive && Math.random() < 0.045) spawn();
     requestAnimationFrame(tick);
   }
 
   window.addEventListener('resize', resize);
   resize();
-  for(let i=0;i<14;i++) spawn();
   tick();
 })();
 </script>
