@@ -99,12 +99,23 @@ export function BenchDesk() {
   return (
     <div className="min-h-dvh bg-bg">
       <header className="relative overflow-hidden border-b border-line">
+        <video
+          className="h-[min(58vh,640px)] w-full object-cover object-center motion-reduce:hidden"
+          autoPlay
+          muted
+          loop
+          playsInline
+          poster="/the-bench.jpg"
+          aria-label="The Bench — audio, video, forensics"
+        >
+          <source src="/the-bench.mp4" type="video/mp4" />
+        </video>
         <img
           src="/the-bench.jpg"
-          alt="The Bench — audio, video, forensics"
-          className="h-[min(58vh,640px)] w-full object-cover object-[center_28%]"
+          alt=""
+          className="hidden h-[min(58vh,640px)] w-full object-cover object-center motion-reduce:block"
         />
-        <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-bg via-bg/20 to-transparent" />
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-bg via-transparent to-transparent" />
         <div className="absolute inset-x-0 bottom-0 flex items-end justify-between px-5 pb-4 lg:px-10">
           <p className="font-mono text-[0.68rem] uppercase tracking-[0.22em] text-fg/80">The Christman AI Project</p>
           <p className="font-mono text-[0.68rem] tracking-[0.18em] text-accent">4849</p>
