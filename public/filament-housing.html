@@ -153,6 +153,7 @@
     const a=Math.random()*Math.PI*2, r=Math.random()*RH*0.88;
     syl.push({x:Math.cos(a)*r, y:Math.sin(a)*r,
       z: fromBack? -LH*1.7 : LH*1.7,
+      vx:0, vy:0,
       vz:(fromBack?1:-1)*(0.10+Math.random()*0.10),
       text:SYL[(Math.random()*SYL.length)|0], held:false});
   }
@@ -223,10 +224,13 @@
   function drawSyl(test){
     for(let i=syl.length-1;i>=0;i--){
       const s=syl[i];
-      if(!test(s.z)) continue;
+      s.x += (s.vx||0)*0.11;
+      s.y += (s.vy||0)*0.11;
       s.z += s.vz*0.11;
+      if(!test(s.z)) continue;
       const p=proj(s);
-      if(!s.held && Math.abs(s.z) < 0.22){
+      const inBarrel = Math.hypot(s.x,s.y) < RH*0.92 && Math.abs(s.z) < LH*0.85;
+      if(!s.held && inBarrel){
         s.held=true; caught++; scountEl.textContent=caught.toLocaleString();
         const sa=Math.atan2(s.y,s.x);
         for(const f of fil){
@@ -237,7 +241,7 @@
       }
       x.fillStyle=s.held?'rgba(255,240,205,0.95)':`rgba(223,233,242,${0.26+0.34*p.d})`;
       x.beginPath(); x.arc(p.X,p.Y,(s.held?2.2:1.5)*p.d,0,Math.PI*2); x.fill();
-      if(Math.abs(s.z)>LH*2.0) syl.splice(i,1);
+      if(Math.hypot(s.x,s.y)>RH*2.6 || Math.abs(s.z)>LH*2.0) syl.splice(i,1);
     }
   }
 
@@ -246,14 +250,23 @@
   for(let i=0;i<14;i++) spawn();
   window.filamentCatch = function(text){
     if(!text) return;
-    const a=Math.random()*Math.PI*2, r=Math.random()*RH*0.55;
-    syl.push({x:Math.cos(a)*r, y:Math.sin(a)*r, z:-LH*1.7, vz:0.18, text:String(text), held:false});
+    const toks = String(text).split(/\s+/).filter(Boolean);
+    for(const tok of toks){
+      const a=Math.random()*Math.PI*2, r=Math.random()*RH*0.45;
+      syl.push({x:Math.cos(a)*r,y:Math.sin(a)*r,z:-LH*1.7,vx:0,vy:0,vz:0.20,text:tok,held:false});
+      syl.push({x:Math.cos(a+Math.PI)*r,y:Math.sin(a+Math.PI)*r,z:LH*1.7,vx:0,vy:0,vz:-0.20,text:tok,held:false});
+      const b=Math.random()*Math.PI*2;
+      syl.push({x:Math.cos(b)*RH*1.2,y:Math.sin(b)*RH*1.2,z:(Math.random()*2-1)*LH*0.5,vx:-Math.sin(b)*0.14,vy:Math.cos(b)*0.14,vz:0.03,text:tok,held:false});
+      const c=Math.random()*Math.PI*2;
+      syl.push({x:Math.cos(c)*RH*1.35,y:Math.sin(c)*RH*1.35,z:(Math.random()*2-1)*0.35,vx:-Math.cos(c)*0.18,vy:-Math.sin(c)*0.18,vz:0,text:tok,held:false});
+    }
   };
   tick();
 })();
 </script>
 <script>
 (function(){
+  const EAR = location.port === '4850' ? '' : 'http://127.0.0.1:4850';
   const btn=document.getElementById('btn'), st=document.getElementById('st'), said=document.getElementById('as-said');
   let listening=false, ctx, stream, proc, queue=Promise.resolve(), lines=[], partial='';
   function render(){
@@ -267,7 +280,7 @@
   }
   function post(pcm,q){
     queue=queue.then(async()=>{
-      const res=await fetch('/live'+(q||''),{method:'POST',headers:{'content-type':'application/octet-stream'},body:pcm.buffer});
+      const res=await fetch(EAR+'/live'+(q||''),{method:'POST',headers:{'content-type':'application/octet-stream'},body:pcm.buffer});
       const body=await res.json();
       if(!body.ok){ st.textContent=body.error||'ear failed'; return; }
       if(body.final && body.text && body.text.trim()){
@@ -279,7 +292,7 @@
     });
     return queue;
   }
-  fetch('/health').then(r=>r.json()).then(h=>{
+  fetch(EAR+'/health').then(r=>r.json()).then(h=>{
     if(h.seated){ st.textContent='seated · vosk · live'; st.classList.add('on'); btn.disabled=false; btn.textContent='Listen'; }
     else { st.textContent='unseated'; }
   }).catch(()=>{ st.textContent='unseated'; });

@@ -2,7 +2,6 @@ import { useEffect, useRef, useState, type DragEvent, type FormEvent } from "rea
 import { AudioLines, Film, Scissors } from "lucide-react";
 import type { BenchJob, CaseFile, VerifyReport } from "@/lib/bench/types";
 import { HatsDrop, loadHats, saveHats, takeHatsDrop } from "@/components/bench/HatsDrop";
-import { LiveEar } from "@/components/bench/LiveEar";
 import { mergeHats, parseHatsFile, type Hats } from "@/lib/bench/hats";
 import { cn, fmtTime } from "@/lib/utils";
 
@@ -99,28 +98,13 @@ export function BenchDesk() {
 
   return (
     <div className="min-h-dvh bg-bg">
-      <header className="relative overflow-hidden border-b border-line">
-        <video
-          className="h-[min(58vh,640px)] w-full object-cover object-center motion-reduce:hidden"
-          autoPlay
-          muted
-          loop
-          playsInline
-          poster="/the-bench.jpg"
-          aria-label="The Bench — audio, video, forensics"
-        >
-          <source src="/the-bench.mp4" type="video/mp4" />
-        </video>
-        <img
-          src="/the-bench.jpg"
-          alt=""
-          className="hidden h-[min(58vh,640px)] w-full object-cover object-center motion-reduce:block"
+      <header className="relative overflow-hidden border-b border-line bg-black">
+        <iframe
+          title="The Filament — housing v2"
+          src="/filament-housing.html"
+          allow="microphone; autoplay"
+          className="block h-[min(82vh,900px)] w-full border-0 bg-black"
         />
-        <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-bg via-transparent to-transparent" />
-        <div className="absolute inset-x-0 bottom-0 flex items-end justify-between px-5 pb-4 lg:px-10">
-          <p className="font-mono text-[0.68rem] uppercase tracking-[0.22em] text-fg/80">The Christman AI Project</p>
-          <p className="font-mono text-[0.68rem] tracking-[0.18em] text-accent">4849</p>
-        </div>
       </header>
 
       <div className="mx-auto grid w-full max-w-6xl items-start gap-10 px-5 py-10 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] lg:px-10 lg:py-12">
@@ -196,7 +180,6 @@ export function BenchDesk() {
             />
           </section>
 
-          <LiveEar earUrl={hats.porchEar} />
           <HatsDrop hats={hats} onChange={writeHats} />
         </div>
       </div>
