@@ -94,7 +94,7 @@ export async function runPorchOnWav(
     return {
       seated: false,
       reason:
-        "Porch is unseated. Seat EverettNC/PORCH — its own GitHub, not Whole House, not :9785. Empty ear stays empty. No invented speech.",
+        "Porch is unseated. Seat EverettNC/THEFILAMENT as the ear, then Porch (EverettNC/PORCH) as the dialect. Not Whole House. Not :9785. Empty ear stays empty. No invented speech.",
       takes: [],
     };
   }
