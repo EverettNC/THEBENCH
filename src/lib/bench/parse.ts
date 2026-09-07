@@ -3,8 +3,9 @@ import type { SceneCut, SilenceSpan, SpeechSpan } from "./types";
 export type { SceneCut, SilenceSpan, SpeechSpan };
 
 const DURATION_RE = /Duration:\s*(\d+):(\d+):(\d+(?:\.\d+)?)/;
-const VIDEO_RE = /Stream #\d+:\d+(?:\[\w+\])?: Video:\s*([^,]+).*?(\d{2,5})x(\d{2,5}).*?([\d.]+)\s*fps/;
-const AUDIO_RE = /Stream #\d+:\d+(?:\[\w+\])?: Audio:\s*([^,]+).*?(\d+)\s*Hz/;
+const VIDEO_RE =
+  /Stream #\d+:\d+(?:\[[^\]]+\])?(?:\([^)]*\))?: Video:\s*([^,]+).*?(\d{2,5})x(\d{2,5}).*?([\d.]+)\s*fps/;
+const AUDIO_RE = /Stream #\d+:\d+(?:\[[^\]]+\])?(?:\([^)]*\))?: Audio:\s*([^,]+).*?(\d+)\s*Hz/;
 const SILENCE_START_RE = /silence_start:\s*([\d.]+)/g;
 const SILENCE_END_RE = /silence_end:\s*([\d.]+)/g;
 const PTS_RE = /pts_time:([\d.]+)/g;

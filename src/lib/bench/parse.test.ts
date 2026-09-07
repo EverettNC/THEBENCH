@@ -25,6 +25,17 @@ Duration: 00:01:02.40, start: 0.000000, bitrate: 1234 kb/s
   assert.equal(streams.audioCodec, "aac (LC)");
   assert.equal(streams.sampleRate, 48000);
 
+  const ffmpeg8 = parseStreams(`
+  Stream #0:0[0x1](und): Video: h264 (High) (avc1 / 0x31637661), yuv420p(progressive), 320x180 [SAR 1:1 DAR 16:9], 5 kb/s, 12 fps, 12 tbr
+  Stream #0:1[0x2](und): Audio: aac (LC) (mp4a / 0x6134706D), 44100 Hz, mono, fltp, 40 kb/s
+  `);
+  assert.equal(ffmpeg8.videoCodec, "h264 (High) (avc1 / 0x31637661)");
+  assert.equal(ffmpeg8.width, 320);
+  assert.equal(ffmpeg8.height, 180);
+  assert.equal(ffmpeg8.fps, 12);
+  assert.equal(ffmpeg8.audioCodec, "aac (LC) (mp4a / 0x6134706D)");
+  assert.equal(ffmpeg8.sampleRate, 44100);
+
   const sil = `
 [silencedetect @ 0] silence_start: 1.20
 [silencedetect @ 0] silence_end: 2.00 | silence_duration: 0.80
