@@ -1,6 +1,6 @@
 import { join } from "node:path";
 import { digestFile, digestsMatch } from "./hash";
-import { getJob, jobDir } from "./process.server";
+import { loadJob, jobDir } from "./process.server";
 import type { Digest, VerifyItem, VerifyReport } from "./types";
 
 async function item(name: string, recorded: Digest | null, path: string): Promise<VerifyItem> {
@@ -16,7 +16,7 @@ async function item(name: string, recorded: Digest | null, path: string): Promis
 }
 
 export async function verifyJob(id: string): Promise<VerifyReport | null> {
-  const job = getJob(id);
+  const job = await loadJob(id);
   if (!job) return null;
   const dir = jobDir(id);
   const items = await Promise.all([

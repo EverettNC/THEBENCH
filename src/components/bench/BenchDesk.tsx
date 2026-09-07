@@ -412,6 +412,12 @@ function CustodyPanel({ job }: { job: BenchJob }) {
             {busy ? "Recomputing…" : "Verify hashes"}
           </button>
           <a
+            href={`/api/bench/${job.id}/REPORT.txt`}
+            className="inline-flex min-h-11 items-center rounded-sm border border-line px-4 text-sm text-fg hover:border-accent"
+          >
+            REPORT.txt
+          </a>
+          <a
             href={`/api/bench/${job.id}/MANIFEST.txt`}
             className="inline-flex min-h-11 items-center rounded-sm border border-line px-4 text-sm text-fg hover:border-accent"
           >
@@ -427,6 +433,7 @@ function CustodyPanel({ job }: { job: BenchJob }) {
       </div>
 
       <dl className="mt-5 grid gap-3 sm:grid-cols-2">
+        <Hash label="On disk" value={job.custody.disk} />
         <Hash label="Job" value={job.id} />
         <Hash label="Case" value={job.custody.case.caseId || "—"} />
         <Hash label="Exhibit" value={job.custody.case.exhibit || "—"} />

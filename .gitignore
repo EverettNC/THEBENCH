@@ -17,3 +17,4 @@ artifacts/
 attachments/
 .cache
 coverage
+/evidence

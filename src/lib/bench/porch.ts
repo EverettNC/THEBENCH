@@ -57,14 +57,20 @@ async function transcribeClip(
   nvidiaKey: string,
   durationMs: number,
 ): Promise<PorchTake> {
-  const form = new FormData();
-  form.append("language", "en");
-  form.append("filler_words", "true");
-  for (const term of buildKeyterms()) form.append("keyterm", term);
-  form.append("file", new File([new Uint8Array(wav)], filename, { type: "audio/wav" }));
   const headers: Record<string, string> = {};
   if (nvidiaKey) headers.Authorization = `Bearer ${nvidiaKey}`;
-  const res = await fetch(ear, { method: "POST", body: form, headers });
+  let res: Response;
+  if (isLoopback(ear)) {
+    headers["content-type"] = "audio/wav";
+    res = await fetch(ear, { method: "POST", body: wav, headers });
+  } else {
+    const form = new FormData();
+    form.append("file", new Blob([new Uint8Array(wav)], { type: "audio/wav" }), filename);
+    form.append("language", "en");
+    form.append("filler_words", "true");
+    for (const term of buildKeyterms()) form.append("keyterm", term);
+    res = await fetch(ear, { method: "POST", body: form, headers });
+  }
   const raw = await res.text();
   let body: unknown;
   try {

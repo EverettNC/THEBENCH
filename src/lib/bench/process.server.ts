@@ -1,7 +1,6 @@
-import { mkdir, writeFile, stat } from "node:fs/promises";
+import { mkdir, writeFile, stat, readdir, readFile } from "node:fs/promises";
 import { createReadStream } from "node:fs";
 import { join } from "node:path";
-import { tmpdir } from "node:os";
 import { Readable } from "node:stream";
 import {
   clampSilence,
@@ -18,11 +17,12 @@ import { PORCH_GITHUB } from "@/lib/porch/types";
 import { ffmpegTimeoutMs, MAX_TAPE_BYTES, TAPE_TOO_LARGE } from "./limits";
 import { resolveFfmpeg, runBin } from "./ffmpeg";
 import { writeStreamToFile } from "./write-tape";
+import { evidenceRoot, forensicFileEar } from "./evidence";
 import type { BenchJob, CaseFile, Custody, Digest, ProcessStep, SceneCut } from "./types";
 
 export type { BenchJob } from "./types";
 
-const ROOT = join(tmpdir(), "bench");
+const ROOT = evidenceRoot();
 const jobs = new Map<string, BenchJob>();
 const FFMPEG = resolveFfmpeg();
 const DISCLAIMER =
@@ -47,7 +47,21 @@ export function getJob(id: string) {
   return jobs.get(id) ?? null;
 }
 
-const ALLOWED_FILE = /^(original\.bin|evidence\.wav|porch\.wav|packet\.json|MANIFEST\.txt|bag\.tgz|cut_\d{4}\.jpg)$/;
+export async function loadJob(id: string): Promise<BenchJob | null> {
+  const mem = jobs.get(id);
+  if (mem) return mem;
+  try {
+    const raw = await readFile(join(jobDir(id), "packet.json"), "utf8");
+    const job = JSON.parse(raw) as BenchJob;
+    jobs.set(id, job);
+    return job;
+  } catch {
+    return null;
+  }
+}
+
+const ALLOWED_FILE =
+  /^(original\.bin|evidence\.wav|porch\.wav|packet\.json|MANIFEST\.txt|REPORT\.txt|bag\.tgz|cut_\d{4}\.jpg)$/;
 
 export function jobFilePath(id: string, name: string): string | null {
   if (!ALLOWED_FILE.test(name)) return null;
@@ -124,6 +138,50 @@ function manifestText(job: BenchJob) {
     "",
     job.custody.disclaimer,
     `Porch: ${PORCH_GITHUB}`,
+    `On disk: ${job.custody.disk}`,
+    "",
+  ].join("\n");
+}
+
+function reportText(job: BenchJob) {
+  const porchLines = !job.porch.seated
+    ? [job.porch.reason || "Porch unseated. Empty ear stays empty."]
+    : job.porch.takes.length === 0
+      ? [job.porch.reason || "No speech spans."]
+      : job.porch.takes.map((t) => {
+          const when = `${t.span.start.toFixed(2)}s–${t.span.end.toFixed(2)}s`;
+          if (t.take?.asSaid) return `${when}\n${t.take.asSaid}`;
+          return `${when}\n${t.error || "Empty ear stays empty."}`;
+        });
+  const cuts = job.cuts.map((c, i) => `  ${String(i + 1).padStart(2, "0")}  ${c.t.toFixed(3)}s`);
+  return [
+    "BENCH FORENSIC REPORT",
+    `jobId: ${job.id}`,
+    `tape: ${job.meta.name}`,
+    `agency: ${job.custody.case.agency || "—"}`,
+    `case: ${job.custody.case.caseId || "—"}`,
+    `exhibit: ${job.custody.case.exhibit || "—"}`,
+    `operator: ${job.custody.case.operator || "—"}`,
+    `started: ${job.custody.startedAt}`,
+    `finished: ${job.custody.finishedAt}`,
+    `disk: ${job.custody.disk}`,
+    "",
+    "SEE",
+    `  ${job.meta.width}×${job.meta.height}  ${job.meta.fps} fps  ${job.meta.videoCodec}`,
+    `  duration ${job.meta.duration.toFixed(2)}s`,
+    `  scene cuts ${job.cuts.length}`,
+    ...(cuts.length ? cuts : ["  none at this threshold"]),
+    "",
+    "HEAR",
+    `  evidence.wav  ${job.wav.evidenceBytes} bytes  48 kHz stereo`,
+    `  porch.wav     ${job.wav.porchBytes} bytes  16 kHz mono`,
+    `  speech spans  ${job.speech.length}`,
+    `  silence spans ${job.silence.length}`,
+    "",
+    "PORCH",
+    ...porchLines,
+    "",
+    job.custody.disclaimer,
     "",
   ].join("\n");
 }
@@ -246,11 +304,13 @@ export async function processTape(
 
   const porchStart = new Date().toISOString();
   const tPorch = Date.now();
-  const porch = await runPorchOnWav(porchPath, speech, hats, dir);
+  const fileEar = await forensicFileEar(hats.porchEar);
+  const earHats = { ...hats, porchEar: fileEar };
+  const porch = await runPorchOnWav(porchPath, speech, earHats, dir);
   log.push({
     n: log.length + 1,
     tool: "porch",
-    argv: ["porch", hats.porchEar ? "seated" : "unseated"],
+    argv: ["porch", fileEar ? "file-ear" : "unseated"],
     code: porch.seated && porch.takes.length ? 0 : porch.seated ? 1 : 0,
     startedAt: porchStart,
     finishedAt: new Date().toISOString(),
@@ -281,6 +341,7 @@ export async function processTape(
       porchWav: porchDigest,
     },
     bag: `/api/bench/${id}/bag.tgz`,
+    disk: dir,
     porch: { organ: "porch", github: PORCH_GITHUB, wholeHouse: false },
     disclaimer: DISCLAIMER,
   };
@@ -315,8 +376,11 @@ export async function processTape(
 
   await writeFile(join(dir, "packet.json"), JSON.stringify(job, null, 2));
   await writeFile(join(dir, "MANIFEST.txt"), manifestText(job));
-  const bagItems = ["original.bin", "evidence.wav", "packet.json", "MANIFEST.txt"];
+  await writeFile(join(dir, "REPORT.txt"), reportText(job));
+  const bagItems = ["original.bin", "evidence.wav", "packet.json", "MANIFEST.txt", "REPORT.txt"];
   if (await exists(join(dir, "porch.wav"))) bagItems.push("porch.wav");
+  const cutFiles = (await readdir(dir)).filter((n) => /^cut_\d{4}\.jpg$/.test(n)).sort();
+  bagItems.push(...cutFiles);
   const bagPath = join(dir, "bag.tgz");
   const bagStart = new Date().toISOString();
   const tBag = Date.now();
@@ -332,6 +396,7 @@ export async function processTape(
   });
   job.custody.finishedAt = new Date().toISOString();
   await writeFile(join(dir, "packet.json"), JSON.stringify(job, null, 2));
+  await writeFile(join(dir, "REPORT.txt"), reportText(job));
   jobs.set(id, job);
   return job;
 }

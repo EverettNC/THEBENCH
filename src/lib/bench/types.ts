@@ -67,6 +67,7 @@ export type Custody = {
     porchWav: Digest | null;
   };
   bag: string;
+  disk: string;
   porch: {
     organ: "porch";
     github: "https://github.com/EverettNC/PORCH";
