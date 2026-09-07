@@ -103,15 +103,6 @@ export function BenchDesk() {
 
   return (
     <div className="min-h-dvh bg-bg">
-      <header className="relative overflow-hidden border-b border-line bg-black">
-        <iframe
-          title="The Filament — housing v2"
-          src="/filament-live.html?v=one"
-          allow="microphone; autoplay"
-          className="block h-[min(82vh,900px)] w-full border-0 bg-black"
-        />
-      </header>
-
       <div className="mx-auto grid w-full max-w-6xl items-start gap-10 px-5 py-10 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] lg:px-10 lg:py-12">
         <aside className="flex flex-col gap-8">
           <div>
