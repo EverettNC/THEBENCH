@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { hatsFromRecord, mergeHats, parseEnv, parseHatsFile } from "./hats.ts";
+import { hatsFromHeaders, hatsFromRecord, mergeHats, parseEnv, parseHatsFile } from "./hats.ts";
 
 test("parse env, json, and merge hats", () => {
   const env = parseEnv(`
@@ -29,4 +29,15 @@ OLLAMA_HOST=http://127.0.0.1:11434
   assert.equal(merged.ollamaUrl, "http://127.0.0.1:11434");
 
   assert.equal(hatsFromRecord({ NGC_API_KEY: "x" }).nvidiaKey, "x");
+
+  const fromHeaders = hatsFromHeaders(
+    new Headers({
+      "x-bench-ear": "http://127.0.0.1:4850/stt",
+      "x-bench-nvidia": "nv",
+      "x-bench-ollama": "http://127.0.0.1:11434",
+    }),
+  );
+  assert.equal(fromHeaders.porchEar, "http://127.0.0.1:4850/stt");
+  assert.equal(fromHeaders.nvidiaKey, "nv");
+  assert.equal(fromHeaders.ollamaUrl, "http://127.0.0.1:11434");
 });

@@ -1,12 +1,15 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { mkdtempSync, rmSync } from "node:fs";
+import { existsSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
 import { parseDuration, parseScenes, parseSilence, speechFromSilence } from "./parse.ts";
+import { resolveFfmpeg } from "./ffmpeg.ts";
+import { TAPE_TOO_LARGE } from "./limits.ts";
+import { writeStreamToFile } from "./write-tape.ts";
 
-const FFMPEG = "/usr/local/bin/ffmpeg";
+const FFMPEG = resolveFfmpeg();
 
 test("ffmpeg extracts wav, silence, and a scene cut from a synthetic tape", async (t) => {
   if (spawnSync(FFMPEG, ["-version"]).status !== 0) {
@@ -91,6 +94,26 @@ test("ffmpeg extracts wav, silence, and a scene cut from a synthetic tape", asyn
     );
     const cuts = parseScenes(scenes.stderr);
     assert.ok(cuts.length >= 1);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("writeStreamToFile refuses an over-cap tape and leaves no original", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "bench-cap-"));
+  const path = join(dir, "original.bin");
+  const body = new ReadableStream<Uint8Array>({
+    start(controller) {
+      controller.enqueue(new Uint8Array([1, 2, 3, 4]));
+      controller.close();
+    },
+  });
+  try {
+    await assert.rejects(() => writeStreamToFile(body, path, 2), (err: unknown) => {
+      assert.equal(err instanceof Error && err.message, TAPE_TOO_LARGE);
+      return true;
+    });
+    assert.equal(existsSync(path), false);
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }

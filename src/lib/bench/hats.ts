@@ -36,6 +36,14 @@ function pick(map: Record<string, string>, names: string[]): string {
   return "";
 }
 
+export function hatsFromHeaders(h: Headers): Hats {
+  return {
+    porchEar: (h.get("x-bench-ear") || "").trim(),
+    nvidiaKey: (h.get("x-bench-nvidia") || "").trim(),
+    ollamaUrl: (h.get("x-bench-ollama") || "").trim(),
+  };
+}
+
 export function hatsFromRecord(map: Record<string, unknown>): Hats {
   const str: Record<string, string> = {};
   for (const [k, v] of Object.entries(map)) {

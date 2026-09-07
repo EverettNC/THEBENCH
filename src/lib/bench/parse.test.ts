@@ -1,6 +1,15 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { clampSilence, parseDuration, parseScenes, parseSilence, parseStreams, speechFromSilence } from "./parse.ts";
+import {
+  clampSilence,
+  parseDuration,
+  parseScenes,
+  parseSilence,
+  parseStreams,
+  speechFromSilence,
+  windowsForEar,
+} from "./parse.ts";
+import { ffmpegTimeoutMs, MAX_EAR_WINDOW_SEC } from "./limits.ts";
 
 test("parse duration, streams, silence, scenes", () => {
   const probe = `
@@ -37,4 +46,23 @@ Duration: 00:01:02.40, start: 0.000000, bitrate: 1234 kb/s
     scenes.map((s) => s.t),
     [0, 1.04, 3.2],
   );
+});
+
+test("150-minute speech is windowed for the ear, not capped at 12", () => {
+  const longTape = windowsForEar([{ start: 0, end: 9000 }]);
+  assert.equal(longTape.length, 9000 / MAX_EAR_WINDOW_SEC);
+  assert.equal(longTape[0]?.start, 0);
+  assert.equal(longTape[0]?.end, 60);
+  assert.equal(longTape.at(-1)?.end, 9000);
+  assert.equal(
+    windowsForEar([
+      { start: 0, end: 0.2 },
+      { start: 1, end: 1.5 },
+    ]).length,
+    1,
+  );
+  assert.equal(ffmpegTimeoutMs(0), 300_000);
+  assert.equal(ffmpegTimeoutMs(10), 300_000);
+  assert.equal(ffmpegTimeoutMs(9000), 13_500_000);
+  assert.equal(ffmpegTimeoutMs(20_000), 14_400_000);
 });

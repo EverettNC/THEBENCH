@@ -142,6 +142,23 @@ function authPopupPlugin(): Plugin {
   };
 }
 
+function benchLongTapePlugin(): Plugin {
+  return {
+    name: "bench-long-tape",
+    configureServer(server) {
+      const arm = () => {
+        const http = server.httpServer;
+        if (!http) return;
+        http.timeout = 0;
+        http.headersTimeout = 0;
+        http.requestTimeout = 0;
+      };
+      arm();
+      server.httpServer?.on("listening", arm);
+    },
+  };
+}
+
 // Bench lives on 0.0.0.0:4849.
 export default defineConfig(({ command, isPreview }) => ({
   server: {
@@ -156,6 +173,7 @@ export default defineConfig(({ command, isPreview }) => ({
   },
   resolve: { tsconfigPaths: true },
   plugins: [
+    benchLongTapePlugin(),
     pgliteBootstrapPlugin(),
     // Before tanstackStart so /auth/popup never falls through to the SPA.
     authPopupPlugin(),

@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { createReadStream } from "node:fs";
 
 export type Digest = { sha256: string; sha512: string };
 
@@ -12,6 +13,16 @@ export function sha512(buf: Buffer | Uint8Array) {
 
 export function digest(buf: Buffer | Uint8Array): Digest {
   return { sha256: sha256(buf), sha512: sha512(buf) };
+}
+
+export async function digestFile(path: string): Promise<Digest> {
+  const sha256h = createHash("sha256");
+  const sha512h = createHash("sha512");
+  for await (const chunk of createReadStream(path)) {
+    sha256h.update(chunk);
+    sha512h.update(chunk);
+  }
+  return { sha256: sha256h.digest("hex"), sha512: sha512h.digest("hex") };
 }
 
 export function digestsMatch(a: Digest, b: Digest) {

@@ -54,17 +54,22 @@ export function BenchDesk() {
     setJob(null);
     setName(file.name);
     saveHats(hats);
-    const form = new FormData();
-    form.append("file", file);
-    form.append("ear", hats.porchEar);
-    form.append("nvidia", hats.nvidiaKey);
-    form.append("ollama", hats.ollamaUrl);
-    form.append("agency", kase.agency);
-    form.append("caseId", kase.caseId);
-    form.append("exhibit", kase.exhibit);
-    form.append("operator", kase.operator);
     try {
-      const res = await fetch("/api/bench/ingest", { method: "POST", body: form });
+      const res = await fetch("/api/bench/ingest", {
+        method: "POST",
+        headers: {
+          "content-type": file.type || "application/octet-stream",
+          "x-bench-filename": encodeURIComponent(file.name),
+          "x-bench-ear": hats.porchEar,
+          "x-bench-nvidia": hats.nvidiaKey,
+          "x-bench-ollama": hats.ollamaUrl,
+          "x-bench-agency": kase.agency,
+          "x-bench-case": kase.caseId,
+          "x-bench-exhibit": kase.exhibit,
+          "x-bench-operator": kase.operator,
+        },
+        body: file,
+      });
       const body = (await res.json()) as IngestResponse;
       if (!body.ok) {
         setError(body.error);
@@ -153,10 +158,10 @@ export function BenchDesk() {
                 {busy ? "On the bench" : hover ? "Release the tape" : "Intake"}
               </p>
               <p className="mt-3 font-display text-3xl italic text-fg sm:text-4xl">
-                {busy ? "Pulling the WAV." : "Drop a video."}
+                {busy ? "Dissecting the tape." : "Drop a video."}
               </p>
               <p className="mt-2 max-w-md text-sm leading-relaxed text-muted">
-                mp4, mov, mkv, webm. 256 MB. Evidence at 48 kHz stereo. Porch at 16 kHz mono.
+                mp4, mov, mkv, webm. 150-minute tapes. 20 GB cap. Evidence at 48 kHz stereo. Porch at 16 kHz mono.
               </p>
               <div className="mt-6 flex flex-wrap items-center gap-3">
                 <button

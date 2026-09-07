@@ -1,6 +1,5 @@
-import { readFile } from "node:fs/promises";
 import { join } from "node:path";
-import { digest, digestsMatch } from "./hash";
+import { digestFile, digestsMatch } from "./hash";
 import { getJob, jobDir } from "./process.server";
 import type { Digest, VerifyItem, VerifyReport } from "./types";
 
@@ -9,7 +8,7 @@ async function item(name: string, recorded: Digest | null, path: string): Promis
     return { name, ok: true, recorded: { sha256: "", sha512: "" }, computed: null };
   }
   try {
-    const computed = digest(await readFile(path));
+    const computed = await digestFile(path);
     return { name, ok: digestsMatch(recorded, computed), recorded, computed };
   } catch {
     return { name, ok: false, recorded, computed: null };

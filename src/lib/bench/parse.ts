@@ -72,6 +72,22 @@ export function speechFromSilence(duration: number, silence: SilenceSpan[]): Spe
   return speech;
 }
 
+/** Cut long speech into ear-sized windows. 2h of talk is 120 clips, not one POST. */
+export function windowsForEar(speech: SpeechSpan[], maxSec = 60): SpeechSpan[] {
+  const cap = maxSec > 0 ? maxSec : 60;
+  const out: SpeechSpan[] = [];
+  for (const s of speech) {
+    if (s.end - s.start < 0.4) continue;
+    let t = s.start;
+    while (t < s.end) {
+      const end = Math.min(s.end, t + cap);
+      if (end - t >= 0.4) out.push({ start: t, end });
+      t = end;
+    }
+  }
+  return out;
+}
+
 export function parseScenes(log: string): SceneCut[] {
   const times = [...log.matchAll(PTS_RE)].map((m) => Number(m[1]));
   const unique: SceneCut[] = [];
