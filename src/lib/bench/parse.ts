@@ -89,6 +89,20 @@ export function windowsForEar(speech: SpeechSpan[], maxSec = 60): SpeechSpan[] {
   return out;
 }
 
+/** Cover the whole tape. Silence detect is not a transcript. */
+export function windowsCovering(duration: number, maxSec = 60): SpeechSpan[] {
+  if (!Number.isFinite(duration) || duration <= 0) return [];
+  const cap = maxSec > 0 ? maxSec : 60;
+  const out: SpeechSpan[] = [];
+  let t = 0;
+  while (t < duration) {
+    const end = Math.min(duration, t + cap);
+    if (end - t >= 0.2) out.push({ start: t, end });
+    t = end;
+  }
+  return out;
+}
+
 export function parseRate(raw: string | undefined): number {
   if (!raw || raw === "0/0" || raw === "N/A") return 0;
   if (raw.includes("/")) {

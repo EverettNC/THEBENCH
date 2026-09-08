@@ -45,10 +45,13 @@ export type DriftReport = {
   sampleRate: number | null;
 };
 
+export type EarWord = { word: string; start: number; end: number };
+
 export type PorchTake = {
   asSaid: string;
   rawEar: string;
   durationMs: number;
+  words?: EarWord[];
   honesty: {
     ear: "local" | "file" | "unseated";
     cloud: boolean;

@@ -23,12 +23,22 @@ async function ping(url: string): Promise<{ ok: boolean; status: number }> {
 export const Route = createFileRoute("/api/bench/probe")({
   server: {
     handlers: {
+      GET: async () => {
+        const filament = await ping("http://127.0.0.1:4850/health");
+        return json({ filament: { seated: filament.ok, status: filament.status } });
+      },
       POST: async ({ request }) => {
         const body = (await request.json()) as { ollamaUrl?: string };
         const ollamaUrl = (body.ollamaUrl ?? "").trim().replace(/\/$/, "");
-        if (!ollamaUrl) return json({ ollama: { seated: false } });
+        const filament = await ping("http://127.0.0.1:4850/health");
+        if (!ollamaUrl) {
+          return json({ ollama: { seated: false }, filament: { seated: filament.ok, status: filament.status } });
+        }
         const tags = await ping(`${ollamaUrl}/api/tags`);
-        return json({ ollama: { seated: tags.ok, status: tags.status } });
+        return json({
+          ollama: { seated: tags.ok, status: tags.status },
+          filament: { seated: filament.ok, status: filament.status },
+        });
       },
     },
   },

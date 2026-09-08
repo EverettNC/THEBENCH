@@ -272,6 +272,44 @@ function Evidence({ job }: { job: BenchJob }) {
         <audio className="mt-4 w-full" controls src={job.wav.evidence} />
       </section>
 
+      <section className="rounded-md border border-line bg-paper px-6 py-7 text-ink shadow-[0_20px_50px_rgba(0,0,0,0.35)]">
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <h2 className="font-display text-3xl italic">Transcript</h2>
+            <p className="mt-1 text-sm text-ink/55">
+              Whole tape, 60-second windows. Filament. Empty ear stays empty. On disk as
+              TRANSCRIPT.txt / .srt / .vtt.
+            </p>
+          </div>
+          <a
+            href={`/api/bench/${job.id}/TRANSCRIPT.txt`}
+            className="inline-flex min-h-11 items-center rounded-sm border border-ink/20 px-4 text-sm text-ink hover:border-ink"
+          >
+            TRANSCRIPT.txt
+          </a>
+        </div>
+        {!job.porch.seated ? (
+          <p className="mt-4 max-w-prose text-base leading-relaxed text-ink/80">{job.porch.reason}</p>
+        ) : job.porch.takes.every((t) => !(t.take?.asSaid || "").trim()) ? (
+          <p className="mt-4 max-w-prose text-base leading-relaxed text-ink/80">
+            {job.porch.reason ?? "Empty ear stays empty."}
+          </p>
+        ) : (
+          <ol className="mt-6 flex flex-col gap-5">
+            {job.porch.takes
+              .filter((t) => (t.take?.asSaid || "").trim())
+              .map((t, i) => (
+                <li key={`tr-${t.span.start}-${i}`} className="border-t border-ink/10 pt-4">
+                  <p className="font-mono text-xs uppercase tracking-[0.14em] text-ink/50">
+                    {fmtTime(t.span.start)} – {fmtTime(t.span.end)}
+                  </p>
+                  <p className="mt-2 whitespace-pre-wrap font-display text-xl leading-snug">{t.take?.asSaid}</p>
+                </li>
+              ))}
+          </ol>
+        )}
+      </section>
+
       <section className="rounded-md border border-line bg-surface p-5">
         <h2 className="font-display text-2xl italic text-fg">Cuts</h2>
         <p className="mt-1 text-sm text-muted">Hard cuts on the picture. ffmpeg scene score. Not a guess.</p>
@@ -460,6 +498,12 @@ function CustodyPanel({ job }: { job: BenchJob }) {
           >
             {busy ? "Recomputing…" : "Verify hashes"}
           </button>
+          <a
+            href={`/api/bench/${job.id}/TRANSCRIPT.txt`}
+            className="inline-flex min-h-11 items-center rounded-sm border border-line px-4 text-sm text-fg hover:border-accent"
+          >
+            TRANSCRIPT.txt
+          </a>
           <a
             href={`/api/bench/${job.id}/SCREEN.txt`}
             className="inline-flex min-h-11 items-center rounded-sm border border-line px-4 text-sm text-fg hover:border-accent"

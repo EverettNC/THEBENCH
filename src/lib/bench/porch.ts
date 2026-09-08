@@ -1,7 +1,8 @@
 import { readFile, unlink } from "node:fs/promises";
 import { join } from "node:path";
 import type { SpeechSpan } from "./parse";
-import { windowsForEar } from "./parse";
+import { windowsCovering } from "./parse";
+import { pickWords } from "./transcript";
 import type { Hats } from "./hats";
 import type { PorchTake } from "./types";
 import { reconstructDialect } from "@/lib/porch/dialect";
@@ -86,6 +87,7 @@ async function transcribeClip(
     asSaid: layer.asSaid,
     rawEar: text,
     durationMs,
+    words: pickWords(body, 0),
     honesty: honesty("file", !isLoopback(ear)),
   };
 }
@@ -95,6 +97,7 @@ export async function runPorchOnWav(
   speech: SpeechSpan[],
   hats: Hats,
   dir: string,
+  duration = 0,
 ): Promise<{
   seated: boolean;
   reason?: string;
@@ -110,9 +113,10 @@ export async function runPorchOnWav(
     };
   }
 
-  const windows = windowsForEar(speech);
+  const covered = windowsCovering(duration);
+  const windows = covered.length ? covered : windowsForEar(speech);
   if (!windows.length) {
-    return { seated: true, reason: "No speech spans.", takes: [] };
+    return { seated: true, reason: "No tape length to hear.", takes: [] };
   }
 
   const ffmpeg = resolveFfmpeg();
@@ -148,6 +152,13 @@ export async function runPorchOnWav(
       }
       const wav = await readFile(clip);
       const take = await transcribeClip(wav, ear, "porch.wav", nvidiaKey, durationMs);
+      if (take.words?.length) {
+        take.words = take.words.map((w) => ({
+          word: w.word,
+          start: w.start + span.start,
+          end: w.end + span.start,
+        }));
+      }
       takes.push({ span, take });
     } catch (err) {
       takes.push({

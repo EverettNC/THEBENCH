@@ -8,6 +8,7 @@ import {
   parseStreams,
   speechFromSilence,
   windowsForEar,
+  windowsCovering,
   parseFfprobe,
 } from "./parse.ts";
 import { ffmpegTimeoutMs, MAX_EAR_WINDOW_SEC } from "./limits.ts";
@@ -73,6 +74,9 @@ test("150-minute speech is windowed for the ear, not capped at 12", () => {
     ]).length,
     1,
   );
+  assert.equal(windowsCovering(0).length, 0);
+  assert.equal(windowsCovering(125, 60).length, 3);
+  assert.equal(windowsCovering(125, 60)[2]?.end, 125);
   assert.equal(ffmpegTimeoutMs(0), 300_000);
   assert.equal(ffmpegTimeoutMs(10), 300_000);
   assert.equal(ffmpegTimeoutMs(9000), 13_500_000);

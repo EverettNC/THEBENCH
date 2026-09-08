@@ -11,7 +11,10 @@ import {
 } from "@/lib/bench/hats";
 import { cn } from "@/lib/utils";
 
-type Probe = { ollama: { seated: boolean; status?: number } } | null;
+type Probe = {
+  ollama?: { seated: boolean; status?: number };
+  filament?: { seated: boolean; status?: number };
+} | null;
 
 export function loadHats(): Hats {
   if (typeof window === "undefined") return { ...EMPTY_HATS };
@@ -43,8 +46,15 @@ export function HatsDrop({
   const seated = hatsSeated(hats);
 
   useEffect(() => {
+    void fetch("/api/bench/probe")
+      .then((r) => r.json())
+      .then((body) => setProbe((prev) => ({ ...(prev ?? {}), ...(body as Probe) })))
+      .catch(() => setProbe((prev) => ({ ...(prev ?? {}), filament: { seated: false } })));
+  }, []);
+
+  useEffect(() => {
     if (!hats.ollamaUrl) {
-      setProbe(null);
+      setProbe((prev) => ({ ...(prev ?? {}), ollama: { seated: false } }));
       return;
     }
     const t = window.setTimeout(() => {
@@ -54,7 +64,7 @@ export function HatsDrop({
         body: JSON.stringify({ ollamaUrl: hats.ollamaUrl }),
       })
         .then((r) => r.json())
-        .then((body) => setProbe(body as Probe))
+        .then((body) => setProbe((prev) => ({ ...(prev ?? {}), ...(body as Probe) })))
         .catch(() => setProbe({ ollama: { seated: false } }));
     }, 400);
     return () => window.clearTimeout(t);
@@ -104,9 +114,10 @@ export function HatsDrop({
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="font-mono text-[0.65rem] uppercase tracking-[0.16em] text-muted">API drop box</p>
         <div className="flex gap-2">
+          <Lamp on={probe?.filament?.seated ?? false} label="Filament" />
           <Lamp on={seated.porch} label="Porch" />
           <Lamp on={seated.nvidia} label="NVIDIA" />
-          <Lamp on={probe?.ollama.seated ?? seated.ollama} label="Ollama" />
+          <Lamp on={probe?.ollama?.seated ?? seated.ollama} label="Ollama" />
         </div>
       </div>
       <p className="mt-2 text-sm leading-relaxed text-muted">

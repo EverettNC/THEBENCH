@@ -19,6 +19,7 @@ import { ffmpegTimeoutMs, MAX_TAPE_BYTES, TAPE_TOO_LARGE } from "./limits";
 import { resolveFfmpeg, resolveFfprobe, runBin } from "./ffmpeg";
 import { writeStreamToFile } from "./write-tape";
 import { evidenceRoot, forensicFileEar, requireEvidenceRoot } from "./evidence";
+import { transcriptSrt, transcriptTxt, transcriptVtt } from "./transcript";
 import { ocrFrame, resolveTesseract, seeIntervalSec, stillTime } from "./see";
 import type { BenchJob, CaseFile, Custody, Digest, DriftReport, ProcessStep, SceneCut, ScreenRead } from "./types";
 
@@ -64,7 +65,7 @@ export async function loadJob(id: string): Promise<BenchJob | null> {
 }
 
 const ALLOWED_FILE =
-  /^(original\.bin|evidence\.wav|porch\.wav|packet\.json|MANIFEST\.txt|REPORT\.txt|DRIFT\.txt|SCREEN\.txt|bag\.tgz|cut_\d{4}\.jpg|see_\d{4}\.jpg)$/;
+  /^(original\.bin|evidence\.wav|porch\.wav|packet\.json|MANIFEST\.txt|REPORT\.txt|DRIFT\.txt|SCREEN\.txt|TRANSCRIPT\.txt|TRANSCRIPT\.srt|TRANSCRIPT\.vtt|bag\.tgz|cut_\d{4}\.jpg|see_\d{4}\.jpg|ear_\d{4}\.wav)$/;
 
 export function jobFilePath(id: string, name: string): string | null {
   if (!ALLOWED_FILE.test(name)) return null;
@@ -142,6 +143,7 @@ function manifestText(job: BenchJob) {
     job.custody.disclaimer,
     `Porch: ${PORCH_GITHUB}`,
     `On disk: ${job.custody.disk}`,
+    "Transcript: TRANSCRIPT.txt  TRANSCRIPT.srt  TRANSCRIPT.vtt",
     "",
   ].join("\n");
 }
@@ -233,6 +235,9 @@ function reportText(job: BenchJob) {
     "",
     "PORCH",
     ...porchLines,
+    "",
+    "TRANSCRIPT",
+    ...transcriptTxt(job.porch.takes).trim().split("\n").slice(2),
     "",
     job.custody.disclaimer,
     "",
@@ -420,7 +425,7 @@ export async function processTape(
   const tPorch = Date.now();
   const fileEar = await forensicFileEar(hats.porchEar);
   const earHats = { ...hats, porchEar: fileEar };
-  const porch = await runPorchOnWav(porchPath, speech, earHats, dir);
+  const porch = await runPorchOnWav(porchPath, speech, earHats, dir, total || duration);
   log.push({
     n: log.length + 1,
     tool: "porch",
@@ -495,7 +500,21 @@ export async function processTape(
   await writeFile(join(dir, "REPORT.txt"), reportText(job));
   await writeFile(join(dir, "DRIFT.txt"), driftText(job));
   await writeFile(join(dir, "SCREEN.txt"), screenText(job));
-  const bagItems = ["original.bin", "evidence.wav", "packet.json", "MANIFEST.txt", "REPORT.txt", "DRIFT.txt", "SCREEN.txt"];
+  await writeFile(join(dir, "TRANSCRIPT.txt"), transcriptTxt(job.porch.takes));
+  await writeFile(join(dir, "TRANSCRIPT.srt"), transcriptSrt(job.porch.takes));
+  await writeFile(join(dir, "TRANSCRIPT.vtt"), transcriptVtt(job.porch.takes));
+  const bagItems = [
+    "original.bin",
+    "evidence.wav",
+    "packet.json",
+    "MANIFEST.txt",
+    "REPORT.txt",
+    "DRIFT.txt",
+    "SCREEN.txt",
+    "TRANSCRIPT.txt",
+    "TRANSCRIPT.srt",
+    "TRANSCRIPT.vtt",
+  ];
   if (await exists(join(dir, "porch.wav"))) bagItems.push("porch.wav");
   const cutFiles = (await readdir(dir)).filter((n) => /^cut_\d{4}\.jpg$/.test(n)).sort();
   const seeFiles = (await readdir(dir)).filter((n) => /^see_\d{4}\.jpg$/.test(n)).sort();
