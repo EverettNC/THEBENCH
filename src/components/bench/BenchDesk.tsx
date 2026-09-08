@@ -103,7 +103,28 @@ export function BenchDesk() {
 
   return (
     <div className="min-h-dvh bg-bg">
-      <div className="mx-auto grid w-full max-w-6xl items-start gap-10 px-5 py-10 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] lg:px-10 lg:py-12">
+      <header className="relative h-dvh overflow-hidden bg-black">
+        <video
+          className="h-full w-full object-cover"
+          src="/the-bench.mp4?v=home"
+          poster="/the-bench.jpg?v=home"
+          autoPlay
+          muted
+          loop
+          playsInline
+          aria-label="The Bench"
+        />
+        <a
+          href="#intake"
+          className="absolute bottom-8 left-1/2 z-10 -translate-x-1/2 font-mono text-[0.68rem] uppercase tracking-[0.22em] text-accent hover:text-fg"
+        >
+          Intake
+        </a>
+      </header>
+      <div
+        id="intake"
+        className="mx-auto grid w-full max-w-6xl items-start gap-10 px-5 py-10 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] lg:px-10 lg:py-12"
+      >
         <aside className="flex flex-col gap-8">
           <div>
             <p className="font-mono text-[0.68rem] uppercase tracking-[0.22em] text-accent">Evidence bench</p>
