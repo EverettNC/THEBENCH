@@ -19,7 +19,8 @@ import { ffmpegTimeoutMs, MAX_TAPE_BYTES, TAPE_TOO_LARGE } from "./limits";
 import { resolveFfmpeg, resolveFfprobe, runBin } from "./ffmpeg";
 import { writeStreamToFile } from "./write-tape";
 import { evidenceRoot, forensicFileEar } from "./evidence";
-import type { BenchJob, CaseFile, Custody, Digest, DriftReport, ProcessStep, SceneCut } from "./types";
+import { ocrFrame, resolveTesseract, seeIntervalSec, stillTime } from "./see";
+import type { BenchJob, CaseFile, Custody, Digest, DriftReport, ProcessStep, SceneCut, ScreenRead } from "./types";
 
 export type { BenchJob } from "./types";
 
@@ -63,7 +64,7 @@ export async function loadJob(id: string): Promise<BenchJob | null> {
 }
 
 const ALLOWED_FILE =
-  /^(original\.bin|evidence\.wav|porch\.wav|packet\.json|MANIFEST\.txt|REPORT\.txt|DRIFT\.txt|bag\.tgz|cut_\d{4}\.jpg)$/;
+  /^(original\.bin|evidence\.wav|porch\.wav|packet\.json|MANIFEST\.txt|REPORT\.txt|DRIFT\.txt|SCREEN\.txt|bag\.tgz|cut_\d{4}\.jpg|see_\d{4}\.jpg)$/;
 
 export function jobFilePath(id: string, name: string): string | null {
   if (!ALLOWED_FILE.test(name)) return null;
@@ -163,6 +164,24 @@ function driftLines(d: DriftReport) {
   ];
 }
 
+function screenText(job: BenchJob) {
+  const lines = job.see.stills.filter((s) => s.text).map((s) => `${s.t.toFixed(2)}s\n${s.text}\n`);
+  return [
+    "BENCH SCREEN",
+    `jobId: ${job.id}`,
+    `tape: ${job.meta.name}`,
+    `interval: ${job.see.intervalSec}s`,
+    `stills: ${job.see.stills.length}`,
+    "",
+    "OCR of sampled frames. Tesseract. Not Porch. Empty frame stays empty. No invented story.",
+    "",
+    ...(lines.length ? lines : ["(no glyphs on sampled frames)"]),
+    "",
+    job.custody.disclaimer,
+    "",
+  ].join("\n");
+}
+
 function driftText(job: BenchJob) {
   return ["BENCH DRIFT", `jobId: ${job.id}`, `tape: ${job.meta.name}`, "", ...driftLines(job.drift), "", job.custody.disclaimer, ""].join(
     "\n",
@@ -197,6 +216,11 @@ function reportText(job: BenchJob) {
     `  duration ${job.meta.duration.toFixed(2)}s`,
     `  scene cuts ${job.cuts.length}`,
     ...(cuts.length ? cuts : ["  none at this threshold"]),
+    `  stills every ${job.see.intervalSec}s  (${job.see.stills.length})`,
+    ...job.see.stills
+      .filter((s) => s.text)
+      .slice(0, 40)
+      .map((s) => `  ${s.t.toFixed(2)}s  ${s.text}`),
     "",
     "DRIFT",
     ...driftLines(job.drift),
@@ -322,6 +346,57 @@ export async function processTape(
     }
   }
 
+  const intervalSec = seeIntervalSec(total || duration);
+  const seePattern = join(dir, "see_%04d.jpg");
+  await step(
+    log,
+    "ffmpeg",
+    FFMPEG,
+    [
+      "-hide_banner",
+      "-y",
+      "-i",
+      originalPath,
+      "-vf",
+      `fps=1/${intervalSec},scale=960:-1`,
+      "-q:v",
+      "4",
+      seePattern,
+    ],
+    longMs,
+  );
+  const tesseract = resolveTesseract();
+  const stills: ScreenRead[] = [];
+  const ocrStart = new Date().toISOString();
+  const tOcr = Date.now();
+  let lastText = "";
+  for (let i = 0; i < 720; i += 1) {
+    const name = `see_${String(i + 1).padStart(4, "0")}.jpg`;
+    const path = join(dir, name);
+    if (!(await exists(path))) break;
+    const t = stillTime(i, intervalSec);
+    let text = "";
+    if (tesseract) {
+      try {
+        text = await ocrFrame(path, tesseract);
+      } catch {
+        text = "";
+      }
+    }
+    if (text && text === lastText) text = "";
+    if (text) lastText = text;
+    stills.push({ t, thumb: `/api/bench/${id}/${name}`, text });
+  }
+  log.push({
+    n: log.length + 1,
+    tool: "see",
+    argv: ["tesseract", "stdout", `${stills.length} stills`, `${intervalSec}s`],
+    code: 0,
+    startedAt: ocrStart,
+    finishedAt: new Date().toISOString(),
+    elapsedMs: Date.now() - tOcr,
+  });
+
   const evidenceBytes = (await stat(evidencePath)).size;
   const porchBytes = (await exists(porchPath)) ? (await stat(porchPath)).size : 0;
 
@@ -406,6 +481,7 @@ export async function processTape(
       porchBytes,
     },
     cuts,
+    see: { intervalSec, stills },
     drift,
     silence,
     speech,
@@ -417,10 +493,12 @@ export async function processTape(
   await writeFile(join(dir, "MANIFEST.txt"), manifestText(job));
   await writeFile(join(dir, "REPORT.txt"), reportText(job));
   await writeFile(join(dir, "DRIFT.txt"), driftText(job));
-  const bagItems = ["original.bin", "evidence.wav", "packet.json", "MANIFEST.txt", "REPORT.txt", "DRIFT.txt"];
+  await writeFile(join(dir, "SCREEN.txt"), screenText(job));
+  const bagItems = ["original.bin", "evidence.wav", "packet.json", "MANIFEST.txt", "REPORT.txt", "DRIFT.txt", "SCREEN.txt"];
   if (await exists(join(dir, "porch.wav"))) bagItems.push("porch.wav");
   const cutFiles = (await readdir(dir)).filter((n) => /^cut_\d{4}\.jpg$/.test(n)).sort();
-  bagItems.push(...cutFiles);
+  const seeFiles = (await readdir(dir)).filter((n) => /^see_\d{4}\.jpg$/.test(n)).sort();
+  bagItems.push(...cutFiles, ...seeFiles);
   const bagPath = join(dir, "bag.tgz");
   const bagStart = new Date().toISOString();
   const tBag = Date.now();
@@ -438,6 +516,7 @@ export async function processTape(
   await writeFile(join(dir, "packet.json"), JSON.stringify(job, null, 2));
   await writeFile(join(dir, "REPORT.txt"), reportText(job));
   await writeFile(join(dir, "DRIFT.txt"), driftText(job));
+  await writeFile(join(dir, "SCREEN.txt"), screenText(job));
   jobs.set(id, job);
   return job;
 }

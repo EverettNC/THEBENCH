@@ -1,6 +1,7 @@
 export type SilenceSpan = { start: number; end: number };
 export type SpeechSpan = { start: number; end: number };
 export type SceneCut = { t: number };
+export type ScreenRead = { t: number; thumb: string; text: string };
 export type Digest = { sha256: string; sha512: string };
 
 export type CaseFile = {
@@ -61,7 +62,7 @@ export type PorchTake = {
 
 export type ProcessStep = {
   n: number;
-  tool: "ffmpeg" | "ffprobe" | "porch" | "hash" | "bag";
+  tool: "ffmpeg" | "ffprobe" | "porch" | "hash" | "bag" | "see";
   argv: string[];
   code: number;
   startedAt: string;
@@ -116,6 +117,7 @@ export type BenchJob = {
   meta: BenchMeta;
   wav: { evidence: string; porch: string; evidenceBytes: number; porchBytes: number; original: string };
   cuts: Array<SceneCut & { thumb: string }>;
+  see: { intervalSec: number; stills: ScreenRead[] };
   drift: DriftReport;
   silence: SilenceSpan[];
   speech: SpeechSpan[];

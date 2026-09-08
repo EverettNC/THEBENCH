@@ -293,6 +293,32 @@ function Evidence({ job }: { job: BenchJob }) {
         )}
       </section>
 
+      {job.see ? (
+        <section className="rounded-md border border-line bg-surface p-5">
+          <h2 className="font-display text-2xl italic text-fg">On screen</h2>
+          <p className="mt-1 text-sm text-muted">
+            Stills every {job.see.intervalSec}s. Tesseract reads glyphs. Not Porch. Empty frame stays empty.
+          </p>
+          {job.see.stills.filter((s) => s.text).length === 0 ? (
+            <p className="mt-4 text-sm text-muted">
+              {job.see.stills.length ? "Stills pulled. No glyphs on those frames." : "No stills pulled from that tape."}
+            </p>
+          ) : (
+            <ul className="mt-5 flex flex-col gap-4">
+              {job.see.stills.filter((s) => s.text).map((s) => (
+                <li key={`see-${s.t}-${s.thumb}`} className="flex gap-4 border-t border-line pt-4">
+                  <img src={s.thumb} alt="" className="h-24 w-40 shrink-0 rounded-sm object-cover" />
+                  <div className="min-w-0">
+                    <p className="font-mono text-xs tabular-nums text-muted">{fmtTime(s.t)}</p>
+                    <p className="mt-1 whitespace-pre-wrap text-sm text-fg">{s.text || "—"}</p>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+      ) : null}
+
       <section className="grid gap-4 lg:grid-cols-2">
         <SpanCard title="Silence" items={job.silence} empty="No silence spans." />
         <SpanCard title="Speech" items={job.speech} empty="No speech spans." />
@@ -434,6 +460,12 @@ function CustodyPanel({ job }: { job: BenchJob }) {
           >
             {busy ? "Recomputing…" : "Verify hashes"}
           </button>
+          <a
+            href={`/api/bench/${job.id}/SCREEN.txt`}
+            className="inline-flex min-h-11 items-center rounded-sm border border-line px-4 text-sm text-fg hover:border-accent"
+          >
+            SCREEN.txt
+          </a>
           <a
             href={`/api/bench/${job.id}/DRIFT.txt`}
             className="inline-flex min-h-11 items-center rounded-sm border border-line px-4 text-sm text-fg hover:border-accent"
