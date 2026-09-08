@@ -10,6 +10,14 @@ export function resolveFfmpeg(): string {
   return "ffmpeg";
 }
 
+export function resolveFfprobe(): string {
+  const fromEnv = process.env.FFPROBE?.trim();
+  if (fromEnv) return fromEnv;
+  const ffmpeg = resolveFfmpeg();
+  if (ffmpeg.endsWith("ffmpeg")) return `${ffmpeg.slice(0, -6)}ffprobe`;
+  return "ffprobe";
+}
+
 export function runBin(
   bin: string,
   args: string[],

@@ -7,6 +7,7 @@ import {
   parseDuration,
   parseScenes,
   parseSilence,
+  parseFfprobe,
   parseStreams,
   speechFromSilence,
 } from "./parse";
@@ -15,16 +16,17 @@ import { EMPTY_HATS, type Hats } from "./hats";
 import { digestFile } from "./hash";
 import { PORCH_GITHUB } from "@/lib/porch/types";
 import { ffmpegTimeoutMs, MAX_TAPE_BYTES, TAPE_TOO_LARGE } from "./limits";
-import { resolveFfmpeg, runBin } from "./ffmpeg";
+import { resolveFfmpeg, resolveFfprobe, runBin } from "./ffmpeg";
 import { writeStreamToFile } from "./write-tape";
 import { evidenceRoot, forensicFileEar } from "./evidence";
-import type { BenchJob, CaseFile, Custody, Digest, ProcessStep, SceneCut } from "./types";
+import type { BenchJob, CaseFile, Custody, Digest, DriftReport, ProcessStep, SceneCut } from "./types";
 
 export type { BenchJob } from "./types";
 
 const ROOT = evidenceRoot();
 const jobs = new Map<string, BenchJob>();
 const FFMPEG = resolveFfmpeg();
+const FFPROBE = resolveFfprobe();
 const DISCLAIMER =
   "Forensic processing record for agency submission. Chain of custody, dual NIST hashes, original bytes preserved. Not an FDA-cleared medical device. Empty ear stays empty. No invented speech.";
 
@@ -61,7 +63,7 @@ export async function loadJob(id: string): Promise<BenchJob | null> {
 }
 
 const ALLOWED_FILE =
-  /^(original\.bin|evidence\.wav|porch\.wav|packet\.json|MANIFEST\.txt|REPORT\.txt|bag\.tgz|cut_\d{4}\.jpg)$/;
+  /^(original\.bin|evidence\.wav|porch\.wav|packet\.json|MANIFEST\.txt|REPORT\.txt|DRIFT\.txt|bag\.tgz|cut_\d{4}\.jpg)$/;
 
 export function jobFilePath(id: string, name: string): string | null {
   if (!ALLOWED_FILE.test(name)) return null;
@@ -143,6 +145,30 @@ function manifestText(job: BenchJob) {
   ].join("\n");
 }
 
+function ms(n: number | null) {
+  if (n === null) return "—";
+  const sign = n > 0 ? "+" : "";
+  return `${sign}${n.toFixed(2)} ms`;
+}
+
+function driftLines(d: DriftReport) {
+  return [
+    `  A/V duration drift  ${ms(d.avDriftMs)}  (audio minus video)`,
+    `  start skew          ${ms(d.startSkewMs)}  (audio start minus video start)`,
+    `  frame-count drift   ${ms(d.frameDriftMs)}  (nb_frames/fps minus video duration)`,
+    `  fps mode            ${d.fpsMode}  r=${d.rFps.toFixed(3)}  avg=${d.avgFps.toFixed(3)}`,
+    `  video               ${d.videoSec ?? "—"}s  start ${d.videoStartSec ?? "—"}s  frames ${d.nbFrames ?? "—"}`,
+    `  audio               ${d.audioSec ?? "—"}s  start ${d.audioStartSec ?? "—"}s  ${d.sampleRate ?? "—"} Hz`,
+    `  container           ${d.containerSec}s`,
+  ];
+}
+
+function driftText(job: BenchJob) {
+  return ["BENCH DRIFT", `jobId: ${job.id}`, `tape: ${job.meta.name}`, "", ...driftLines(job.drift), "", job.custody.disclaimer, ""].join(
+    "\n",
+  );
+}
+
 function reportText(job: BenchJob) {
   const porchLines = !job.porch.seated
     ? [job.porch.reason || "Porch unseated. Empty ear stays empty."]
@@ -171,6 +197,9 @@ function reportText(job: BenchJob) {
     `  duration ${job.meta.duration.toFixed(2)}s`,
     `  scene cuts ${job.cuts.length}`,
     ...(cuts.length ? cuts : ["  none at this threshold"]),
+    "",
+    "DRIFT",
+    ...driftLines(job.drift),
     "",
     "HEAR",
     `  evidence.wav  ${job.wav.evidenceBytes} bytes  48 kHz stereo`,
@@ -208,6 +237,15 @@ export async function processTape(
   const duration = parseDuration(probe.stderr);
   const streams = parseStreams(probe.stderr);
   const longMs = ffmpegTimeoutMs(duration);
+
+  const probed = await step(
+    log,
+    "ffprobe",
+    FFPROBE,
+    ["-hide_banner", "-v", "error", "-print_format", "json", "-show_format", "-show_streams", originalPath],
+    180_000,
+  );
+  const drift = parseFfprobe(probed.stdout || probed.stderr);
 
   const evidencePath = join(dir, "evidence.wav");
   const porchPath = join(dir, "porch.wav");
@@ -368,6 +406,7 @@ export async function processTape(
       porchBytes,
     },
     cuts,
+    drift,
     silence,
     speech,
     porch,
@@ -377,7 +416,8 @@ export async function processTape(
   await writeFile(join(dir, "packet.json"), JSON.stringify(job, null, 2));
   await writeFile(join(dir, "MANIFEST.txt"), manifestText(job));
   await writeFile(join(dir, "REPORT.txt"), reportText(job));
-  const bagItems = ["original.bin", "evidence.wav", "packet.json", "MANIFEST.txt", "REPORT.txt"];
+  await writeFile(join(dir, "DRIFT.txt"), driftText(job));
+  const bagItems = ["original.bin", "evidence.wav", "packet.json", "MANIFEST.txt", "REPORT.txt", "DRIFT.txt"];
   if (await exists(join(dir, "porch.wav"))) bagItems.push("porch.wav");
   const cutFiles = (await readdir(dir)).filter((n) => /^cut_\d{4}\.jpg$/.test(n)).sort();
   bagItems.push(...cutFiles);
@@ -397,6 +437,7 @@ export async function processTape(
   job.custody.finishedAt = new Date().toISOString();
   await writeFile(join(dir, "packet.json"), JSON.stringify(job, null, 2));
   await writeFile(join(dir, "REPORT.txt"), reportText(job));
+  await writeFile(join(dir, "DRIFT.txt"), driftText(job));
   jobs.set(id, job);
   return job;
 }

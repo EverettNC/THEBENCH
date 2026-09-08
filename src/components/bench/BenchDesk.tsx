@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type DragEvent, type FormEvent } from "react";
 import { AudioLines, Film, Scissors } from "lucide-react";
-import type { BenchJob, CaseFile, VerifyReport } from "@/lib/bench/types";
+import type { BenchJob, CaseFile, DriftReport, VerifyReport } from "@/lib/bench/types";
 import { HatsDrop, loadHats, saveHats, takeHatsDrop } from "@/components/bench/HatsDrop";
 import { mergeHats, parseHatsFile, type Hats } from "@/lib/bench/hats";
 import { cn, fmtTime } from "@/lib/utils";
@@ -298,6 +298,8 @@ function Evidence({ job }: { job: BenchJob }) {
         <SpanCard title="Speech" items={job.speech} empty="No speech spans." />
       </section>
 
+      {job.drift ? <DriftCard drift={job.drift} /> : null}
+
       <section className="rounded-md border border-line bg-paper px-6 py-7 text-ink shadow-[0_20px_50px_rgba(0,0,0,0.35)]">
         <div className="flex items-baseline justify-between gap-3">
           <h2 className="font-display text-3xl italic">Porch</h2>
@@ -433,6 +435,12 @@ function CustodyPanel({ job }: { job: BenchJob }) {
             {busy ? "Recomputing…" : "Verify hashes"}
           </button>
           <a
+            href={`/api/bench/${job.id}/DRIFT.txt`}
+            className="inline-flex min-h-11 items-center rounded-sm border border-line px-4 text-sm text-fg hover:border-accent"
+          >
+            DRIFT.txt
+          </a>
+          <a
             href={`/api/bench/${job.id}/REPORT.txt`}
             className="inline-flex min-h-11 items-center rounded-sm border border-line px-4 text-sm text-fg hover:border-accent"
           >
@@ -498,6 +506,29 @@ function Hash({ label, value }: { label: string; value: string }) {
       <dt className="font-mono text-[0.62rem] uppercase tracking-[0.16em] text-subtle">{label}</dt>
       <dd className="mt-1 truncate font-mono text-xs text-fg">{value}</dd>
     </div>
+  );
+}
+
+function fmtMs(n: number | null) {
+  if (n === null) return "—";
+  const sign = n > 0 ? "+" : "";
+  return `${sign}${n.toFixed(2)} ms`;
+}
+
+function DriftCard({ drift }: { drift: DriftReport }) {
+  return (
+    <section className="rounded-md border border-line bg-surface p-5">
+      <h2 className="font-display text-2xl italic text-fg">Drift</h2>
+      <p className="mt-1 text-sm text-muted">Measured from original bytes. Audio minus video. Not a guess.</p>
+      <dl className="mt-4 grid gap-3 sm:grid-cols-2">
+        <Hash label="A/V duration" value={fmtMs(drift.avDriftMs)} />
+        <Hash label="Start skew" value={fmtMs(drift.startSkewMs)} />
+        <Hash label="Frame-count drift" value={fmtMs(drift.frameDriftMs)} />
+        <Hash label="FPS mode" value={`${drift.fpsMode} · r ${drift.rFps.toFixed(3)} · avg ${drift.avgFps.toFixed(3)}`} />
+        <Hash label="Video" value={`${drift.videoSec ?? "—"}s · start ${drift.videoStartSec ?? "—"}s · ${drift.nbFrames ?? "—"} frames`} />
+        <Hash label="Audio" value={`${drift.audioSec ?? "—"}s · start ${drift.audioStartSec ?? "—"}s · ${drift.sampleRate ?? "—"} Hz`} />
+      </dl>
+    </section>
   );
 }
 

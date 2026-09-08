@@ -62,7 +62,7 @@ async function transcribeClip(
   let res: Response;
   if (isLoopback(ear)) {
     headers["content-type"] = "audio/wav";
-    res = await fetch(ear, { method: "POST", body: wav, headers });
+    res = await fetch(ear, { method: "POST", body: new Uint8Array(wav), headers });
   } else {
     const form = new FormData();
     form.append("file", new Blob([new Uint8Array(wav)], { type: "audio/wav" }), filename);

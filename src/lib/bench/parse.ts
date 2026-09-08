@@ -1,4 +1,4 @@
-import type { SceneCut, SilenceSpan, SpeechSpan } from "./types";
+import type { DriftReport, SceneCut, SilenceSpan, SpeechSpan } from "./types";
 
 export type { SceneCut, SilenceSpan, SpeechSpan };
 
@@ -87,6 +87,89 @@ export function windowsForEar(speech: SpeechSpan[], maxSec = 60): SpeechSpan[] {
     }
   }
   return out;
+}
+
+export function parseRate(raw: string | undefined): number {
+  if (!raw || raw === "0/0" || raw === "N/A") return 0;
+  if (raw.includes("/")) {
+    const [a, b] = raw.split("/");
+    const n = Number(a);
+    const d = Number(b);
+    return d ? n / d : 0;
+  }
+  const n = Number(raw);
+  return Number.isFinite(n) ? n : 0;
+}
+
+function num(value: unknown): number | null {
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (typeof value === "string" && value.trim() && value !== "N/A") {
+    const n = Number(value);
+    return Number.isFinite(n) ? n : null;
+  }
+  return null;
+}
+
+export function parseFfprobe(raw: string): DriftReport {
+  const empty: DriftReport = {
+    containerSec: 0,
+    videoSec: null,
+    audioSec: null,
+    videoStartSec: null,
+    audioStartSec: null,
+    avDriftMs: null,
+    startSkewMs: null,
+    expectedVideoSec: null,
+    frameDriftMs: null,
+    fpsMode: "unknown",
+    rFps: 0,
+    avgFps: 0,
+    nbFrames: null,
+    sampleRate: null,
+  };
+  let body: unknown;
+  try {
+    body = JSON.parse(raw) as unknown;
+  } catch {
+    return empty;
+  }
+  if (typeof body !== "object" || body === null) return empty;
+  const rec = body as { format?: { duration?: unknown; start_time?: unknown }; streams?: unknown };
+  const streams = Array.isArray(rec.streams) ? rec.streams : [];
+  const video = streams.find((s) => typeof s === "object" && s !== null && (s as { codec_type?: string }).codec_type === "video") as
+    | Record<string, unknown>
+    | undefined;
+  const audio = streams.find((s) => typeof s === "object" && s !== null && (s as { codec_type?: string }).codec_type === "audio") as
+    | Record<string, unknown>
+    | undefined;
+  const containerSec = num(rec.format?.duration) ?? 0;
+  const videoSec = num(video?.duration);
+  const audioSec = num(audio?.duration);
+  const videoStartSec = num(video?.start_time);
+  const audioStartSec = num(audio?.start_time);
+  const avgFps = parseRate(typeof video?.avg_frame_rate === "string" ? video.avg_frame_rate : undefined);
+  const rFps = parseRate(typeof video?.r_frame_rate === "string" ? video.r_frame_rate : undefined);
+  const nbFrames = num(video?.nb_frames);
+  const fps = avgFps || rFps;
+  const expectedVideoSec = nbFrames !== null && fps > 0 ? nbFrames / fps : null;
+  let fpsMode: DriftReport["fpsMode"] = "unknown";
+  if (avgFps > 0 && rFps > 0) fpsMode = Math.abs(avgFps - rFps) < 0.05 ? "cfr" : "vfr";
+  return {
+    containerSec,
+    videoSec,
+    audioSec,
+    videoStartSec,
+    audioStartSec,
+    avDriftMs: videoSec !== null && audioSec !== null ? (audioSec - videoSec) * 1000 : null,
+    startSkewMs: videoStartSec !== null && audioStartSec !== null ? (audioStartSec - videoStartSec) * 1000 : null,
+    expectedVideoSec,
+    frameDriftMs: expectedVideoSec !== null && videoSec !== null ? (expectedVideoSec - videoSec) * 1000 : null,
+    fpsMode,
+    rFps,
+    avgFps,
+    nbFrames,
+    sampleRate: num(audio?.sample_rate),
+  };
 }
 
 export function parseScenes(log: string): SceneCut[] {

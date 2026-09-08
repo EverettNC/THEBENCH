@@ -8,6 +8,7 @@ import {
   parseStreams,
   speechFromSilence,
   windowsForEar,
+  parseFfprobe,
 } from "./parse.ts";
 import { ffmpegTimeoutMs, MAX_EAR_WINDOW_SEC } from "./limits.ts";
 
@@ -76,4 +77,32 @@ test("150-minute speech is windowed for the ear, not capped at 12", () => {
   assert.equal(ffmpegTimeoutMs(10), 300_000);
   assert.equal(ffmpegTimeoutMs(9000), 13_500_000);
   assert.equal(ffmpegTimeoutMs(20_000), 14_400_000);
+});
+
+test("ffprobe records A/V drift, start skew, and VFR", () => {
+  const drifted = parseFfprobe(
+    JSON.stringify({
+      format: { duration: "10.200000" },
+      streams: [
+        {
+          codec_type: "video",
+          duration: "10.200000",
+          start_time: "0.000000",
+          nb_frames: "306",
+          avg_frame_rate: "24/1",
+          r_frame_rate: "30/1",
+        },
+        {
+          codec_type: "audio",
+          duration: "10.000000",
+          start_time: "0.040000",
+          sample_rate: "48000",
+        },
+      ],
+    }),
+  );
+  assert.equal(drifted.fpsMode, "vfr");
+  assert.ok((drifted.avDriftMs ?? 0) < -150);
+  assert.ok((drifted.startSkewMs ?? 0) > 30);
+  assert.equal(drifted.sampleRate, 48000);
 });

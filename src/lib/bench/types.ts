@@ -23,6 +23,27 @@ export type BenchMeta = {
   mime: string;
 };
 
+/** Measured from the original bytes. Not inferred. */
+export type DriftReport = {
+  containerSec: number;
+  videoSec: number | null;
+  audioSec: number | null;
+  videoStartSec: number | null;
+  audioStartSec: number | null;
+  /** Audio duration minus video duration, milliseconds. */
+  avDriftMs: number | null;
+  /** Audio start minus video start, milliseconds. */
+  startSkewMs: number | null;
+  expectedVideoSec: number | null;
+  /** (nb_frames / fps − video duration) in milliseconds. */
+  frameDriftMs: number | null;
+  fpsMode: "cfr" | "vfr" | "unknown";
+  rFps: number;
+  avgFps: number;
+  nbFrames: number | null;
+  sampleRate: number | null;
+};
+
 export type PorchTake = {
   asSaid: string;
   rawEar: string;
@@ -40,7 +61,7 @@ export type PorchTake = {
 
 export type ProcessStep = {
   n: number;
-  tool: "ffmpeg" | "porch" | "hash" | "bag";
+  tool: "ffmpeg" | "ffprobe" | "porch" | "hash" | "bag";
   argv: string[];
   code: number;
   startedAt: string;
@@ -95,6 +116,7 @@ export type BenchJob = {
   meta: BenchMeta;
   wav: { evidence: string; porch: string; evidenceBytes: number; porchBytes: number; original: string };
   cuts: Array<SceneCut & { thumb: string }>;
+  drift: DriftReport;
   silence: SilenceSpan[];
   speech: SpeechSpan[];
   porch: {

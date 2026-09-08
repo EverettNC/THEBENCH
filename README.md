@@ -20,7 +20,7 @@ Empty ear stays empty. No invented speech.
 
 150-minute tapes are in scope. Cap is 20 GB. Original streamed to disk. Hashes streamed.
 
-Reports land in `evidence/{jobId}/` on this machine: `packet.json`, `REPORT.txt`, `MANIFEST.txt`, `bag.tgz`, WAVs, cuts. Not `/tmp`. Not live audio. Porch hears the file ear (`:4850/stt`) after the fact. Scene cuts are the picture.
+Reports land in `evidence/{jobId}/` on this machine: `packet.json`, `REPORT.txt`, `DRIFT.txt`, `MANIFEST.txt`, `bag.tgz`, WAVs, cuts. Not `/tmp`. Not live audio. Porch hears the file ear (`:4850/stt`) after the fact. Scene cuts are the picture. Drift is A/V duration, start skew, and frame-count vs fps.
 
 This bench produces a forensic processing record for agency submission. It is **not** an FDA-cleared medical device.
 
