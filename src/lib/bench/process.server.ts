@@ -18,7 +18,7 @@ import { PORCH_GITHUB } from "@/lib/porch/types";
 import { ffmpegTimeoutMs, MAX_TAPE_BYTES, TAPE_TOO_LARGE } from "./limits";
 import { resolveFfmpeg, resolveFfprobe, runBin } from "./ffmpeg";
 import { writeStreamToFile } from "./write-tape";
-import { evidenceRoot, forensicFileEar } from "./evidence";
+import { evidenceRoot, forensicFileEar, requireEvidenceRoot } from "./evidence";
 import { ocrFrame, resolveTesseract, seeIntervalSec, stillTime } from "./see";
 import type { BenchJob, CaseFile, Custody, Digest, DriftReport, ProcessStep, SceneCut, ScreenRead } from "./types";
 
@@ -245,6 +245,7 @@ export async function processTape(
   caseFile: CaseFile = EMPTY_CASE,
 ): Promise<BenchJob> {
   if (source.size > MAX_TAPE_BYTES) throw new Error(TAPE_TOO_LARGE);
+  requireEvidenceRoot();
   const startedAt = new Date().toISOString();
   const id = crypto.randomUUID();
   const dir = jobDir(id);

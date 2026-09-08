@@ -1,10 +1,24 @@
-import { join } from "node:path";
+import { existsSync, mkdirSync } from "node:fs";
 
-/** Bags live here. Not /tmp. Not the live organ. */
+/** Bags live on ELEMENTS. Not /tmp. Not the repo. Not the live organ. */
+export const ELEMENTS_VOLUME = "/Volumes/ELEMENTS";
+export const ELEMENTS_EVIDENCE = "/Volumes/ELEMENTS/EVIDENCE";
+
 export function evidenceRoot() {
   const fromEnv = process.env.BENCH_EVIDENCE?.trim();
   if (fromEnv) return fromEnv;
-  return join(process.cwd(), "evidence");
+  return ELEMENTS_EVIDENCE;
+}
+
+export function requireEvidenceRoot() {
+  const root = evidenceRoot();
+  if (root.startsWith(`${ELEMENTS_VOLUME}/`) || root === ELEMENTS_VOLUME) {
+    if (!existsSync(ELEMENTS_VOLUME)) {
+      throw new Error("ELEMENTS is not mounted. THEBENCH bags live on /Volumes/ELEMENTS/EVIDENCE.");
+    }
+  }
+  mkdirSync(root, { recursive: true });
+  return root;
 }
 
 export const FILAMENT_FILE_EAR = "http://127.0.0.1:4850/stt";
