@@ -12,7 +12,6 @@ dist
 .DS_Store
 /tmp
 screenshots
-.grok/
 artifacts/
 attachments/
 .cache
