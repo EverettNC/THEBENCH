@@ -5,6 +5,8 @@ export const TAPE_TOO_LARGE = "Tape is over 20 GB. Cut it first.";
 export const MAX_EAR_WINDOW_SEC = 60;
 export const FFMPEG_TIMEOUT_FLOOR_MS = 300_000;
 export const FFMPEG_TIMEOUT_CAP_MS = 14_400_000;
+/** Screen OCR must not hold the bag. Stills stay. Empty text if this budget burns. */
+export const OCR_BUDGET_MS = 45_000;
 
 export function ffmpegTimeoutMs(durationSec: number): number {
   if (!Number.isFinite(durationSec) || durationSec <= 0) return FFMPEG_TIMEOUT_FLOOR_MS;

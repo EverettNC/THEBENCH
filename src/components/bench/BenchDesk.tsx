@@ -5,7 +5,13 @@ import { HatsDrop, loadHats, saveHats, takeHatsDrop } from "@/components/bench/H
 import { mergeHats, parseHatsFile, type Hats } from "@/lib/bench/hats";
 import { cn, fmtTime } from "@/lib/utils";
 
-type IngestResponse = { ok: true; job: BenchJob } | { ok: false; error: string };
+type IngestResponse =
+  | { ok: true; status?: string; job: BenchJob | { id: string; status: string; name?: string; bytes?: number } }
+  | { ok: false; error: string };
+type StatusResponse =
+  | { ok: true; status: "done"; job: BenchJob }
+  | { ok: true; status: "dissecting"; id: string }
+  | { ok: false; status?: string; error: string };
 
 export function BenchDesk() {
   const inputRef = useRef<HTMLInputElement>(null);
@@ -75,7 +81,29 @@ export function BenchDesk() {
         setError(body.error);
         return;
       }
-      setJob(body.job);
+      const id = body.job.id;
+      if ("custody" in body.job) {
+        setJob(body.job);
+        return;
+      }
+      const deadline = Date.now() + 40 * 60 * 1000;
+      for (;;) {
+        if (Date.now() > deadline) {
+          setError("Still working on disk. Do not drop that tape again.");
+          return;
+        }
+        await new Promise((r) => setTimeout(r, 2000));
+        const st = await fetch(`/api/bench/${id}/status`);
+        const report = (await st.json()) as StatusResponse;
+        if (!report.ok) {
+          setError(report.error);
+          return;
+        }
+        if (report.status === "done") {
+          setJob(report.job);
+          return;
+        }
+      }
     } catch {
       setError("The bench could not take that tape.");
     } finally {
@@ -335,11 +363,11 @@ function Evidence({ job }: { job: BenchJob }) {
         <section className="rounded-md border border-line bg-surface p-5">
           <h2 className="font-display text-2xl italic text-fg">On screen</h2>
           <p className="mt-1 text-sm text-muted">
-            Stills every {job.see.intervalSec}s. Tesseract reads glyphs. Not Porch. Empty frame stays empty.
+            Stills every {job.see.intervalSec}s. Christman OCR. Not Porch. Empty frame stays empty.
           </p>
           {job.see.stills.filter((s) => s.text).length === 0 ? (
             <p className="mt-4 text-sm text-muted">
-              {job.see.stills.length ? "Stills pulled. No glyphs on those frames." : "No stills pulled from that tape."}
+              {job.see.stills.length ? "Stills pulled. No text on those frames." : "No stills pulled from that tape."}
             </p>
           ) : (
             <ul className="mt-5 flex flex-col gap-4">
