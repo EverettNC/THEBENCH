@@ -20,7 +20,7 @@ Empty ear stays empty. No invented speech.
 
 150-minute tapes are in scope. Cap is 20 GB. Original streamed to disk. Hashes streamed.
 
-Reports land in `/Volumes/ELEMENTS/EVIDENCE/{jobId}/`: `packet.json`, `REPORT.txt`, `DRIFT.txt`, `SCREEN.txt`, `MANIFEST.txt`, `bag.tgz`, WAVs, cuts, stills. Not `/tmp`. Not the repo. Not live audio. ELEMENTS has to be mounted. Porch hears the file ear (`:4850/stt`) after the fact. Scene cuts plus interval stills. Tesseract reads glyphs on those stills. Empty frame stays empty. Drift is A/V duration, start skew, and frame-count vs fps.
+Reports land in `/Volumes/ELEMENTS/EVIDENCE/{jobId}/`: `packet.json`, `REPORT.txt`, `DRIFT.txt`, `SCREEN.txt`, `MANIFEST.txt`, `bag.tgz`, WAVs, cuts, stills. Not `/tmp`. Not the repo. Not live audio. ELEMENTS has to be mounted. The Filament ([EverettNC/THEFILAMENT](https://github.com/EverettNC/THEFILAMENT)) hears the file ear (`:4850/stt`) after the fact. Porch is the dialect over it, not the ear. Scene cuts plus interval stills. Tesseract reads glyphs on those stills. Empty frame stays empty. Drift is A/V duration, start skew, and frame-count vs fps.
 
 This bench produces a forensic processing record for agency submission. It is **not** an FDA-cleared medical device.
 
