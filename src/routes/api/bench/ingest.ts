@@ -1,5 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { MAX_TAPE_BYTES, processTape, TAPE_TOO_LARGE } from "@/lib/bench/process.server";
+import { writeFile } from "node:fs/promises";
+import { join } from "node:path";
+import { finishLandedTape, landTape, MAX_TAPE_BYTES, TAPE_TOO_LARGE } from "@/lib/bench/process.server";
 import { hatsFromHeaders } from "@/lib/bench/hats";
 import type { CaseFile } from "@/lib/bench/types";
 
@@ -44,17 +46,23 @@ export const Route = createFileRoute("/api/bench/ingest")({
           return json({ ok: false, error: "Drop a tape." }, 400);
         }
         try {
-          const job = await processTape(
-            {
-              name: filenameFrom(request),
-              mime: request.headers.get("content-type") || "application/octet-stream",
-              size: Number.isFinite(declared) ? declared : 0,
-              body: request.body,
-            },
-            hatsFromHeaders(request.headers),
-            caseFromHeaders(request),
-          );
-          return json({ ok: true, job });
+          const hats = hatsFromHeaders(request.headers);
+          const caseFile = caseFromHeaders(request);
+          const landed = await landTape({
+            name: filenameFrom(request),
+            mime: request.headers.get("content-type") || "application/octet-stream",
+            size: Number.isFinite(declared) ? declared : 0,
+            body: request.body,
+          });
+          void finishLandedTape(landed, hats, caseFile).catch(async (err) => {
+            const message = err instanceof Error ? err.message : "The bench failed.";
+            await writeFile(join(landed.dir, "FAIL.txt"), `${message}\n`);
+          });
+          return json({
+            ok: true,
+            status: "dissecting",
+            job: { id: landed.id, status: "dissecting", name: landed.name, bytes: landed.bytes },
+          });
         } catch (err) {
           const message = err instanceof Error ? err.message : "The bench failed.";
           const status = message === TAPE_TOO_LARGE ? 413 : 500;

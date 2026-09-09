@@ -13,6 +13,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as ApiBenchIngestRouteImport } from './routes/api/bench/ingest'
 import { Route as ApiBenchProbeRouteImport } from './routes/api/bench/probe'
 import { Route as ApiBenchJobIdNameRouteImport } from './routes/api/bench/$jobId/$name'
+import { Route as ApiBenchJobIdStatusRouteImport } from './routes/api/bench/$jobId/status'
 import { Route as ApiBenchJobIdVerifyRouteImport } from './routes/api/bench/$jobId/verify'
 
 const IndexRoute = IndexRouteImport.update({
@@ -35,6 +36,11 @@ const ApiBenchJobIdNameRoute = ApiBenchJobIdNameRouteImport.update({
   path: '/api/bench/$jobId/$name',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiBenchJobIdStatusRoute = ApiBenchJobIdStatusRouteImport.update({
+  id: '/api/bench/$jobId/status',
+  path: '/api/bench/$jobId/status',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiBenchJobIdVerifyRoute = ApiBenchJobIdVerifyRouteImport.update({
   id: '/api/bench/$jobId/verify',
   path: '/api/bench/$jobId/verify',
@@ -46,6 +52,7 @@ export interface FileRoutesByFullPath {
   '/api/bench/ingest': typeof ApiBenchIngestRoute
   '/api/bench/probe': typeof ApiBenchProbeRoute
   '/api/bench/$jobId/$name': typeof ApiBenchJobIdNameRoute
+  '/api/bench/$jobId/status': typeof ApiBenchJobIdStatusRoute
   '/api/bench/$jobId/verify': typeof ApiBenchJobIdVerifyRoute
 }
 export interface FileRoutesByTo {
@@ -53,6 +60,7 @@ export interface FileRoutesByTo {
   '/api/bench/ingest': typeof ApiBenchIngestRoute
   '/api/bench/probe': typeof ApiBenchProbeRoute
   '/api/bench/$jobId/$name': typeof ApiBenchJobIdNameRoute
+  '/api/bench/$jobId/status': typeof ApiBenchJobIdStatusRoute
   '/api/bench/$jobId/verify': typeof ApiBenchJobIdVerifyRoute
 }
 export interface FileRoutesById {
@@ -61,6 +69,7 @@ export interface FileRoutesById {
   '/api/bench/ingest': typeof ApiBenchIngestRoute
   '/api/bench/probe': typeof ApiBenchProbeRoute
   '/api/bench/$jobId/$name': typeof ApiBenchJobIdNameRoute
+  '/api/bench/$jobId/status': typeof ApiBenchJobIdStatusRoute
   '/api/bench/$jobId/verify': typeof ApiBenchJobIdVerifyRoute
 }
 export interface FileRouteTypes {
@@ -70,6 +79,7 @@ export interface FileRouteTypes {
     | '/api/bench/ingest'
     | '/api/bench/probe'
     | '/api/bench/$jobId/$name'
+    | '/api/bench/$jobId/status'
     | '/api/bench/$jobId/verify'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -77,6 +87,7 @@ export interface FileRouteTypes {
     | '/api/bench/ingest'
     | '/api/bench/probe'
     | '/api/bench/$jobId/$name'
+    | '/api/bench/$jobId/status'
     | '/api/bench/$jobId/verify'
   id:
     | '__root__'
@@ -84,6 +95,7 @@ export interface FileRouteTypes {
     | '/api/bench/ingest'
     | '/api/bench/probe'
     | '/api/bench/$jobId/$name'
+    | '/api/bench/$jobId/status'
     | '/api/bench/$jobId/verify'
   fileRoutesById: FileRoutesById
 }
@@ -92,6 +104,7 @@ export interface RootRouteChildren {
   ApiBenchIngestRoute: typeof ApiBenchIngestRoute
   ApiBenchProbeRoute: typeof ApiBenchProbeRoute
   ApiBenchJobIdNameRoute: typeof ApiBenchJobIdNameRoute
+  ApiBenchJobIdStatusRoute: typeof ApiBenchJobIdStatusRoute
   ApiBenchJobIdVerifyRoute: typeof ApiBenchJobIdVerifyRoute
 }
 
@@ -125,6 +138,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiBenchJobIdNameRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/bench/$jobId/status': {
+      id: '/api/bench/$jobId/status'
+      path: '/api/bench/$jobId/status'
+      fullPath: '/api/bench/$jobId/status'
+      preLoaderRoute: typeof ApiBenchJobIdStatusRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/bench/$jobId/verify': {
       id: '/api/bench/$jobId/verify'
       path: '/api/bench/$jobId/verify'
@@ -140,6 +160,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiBenchIngestRoute: ApiBenchIngestRoute,
   ApiBenchProbeRoute: ApiBenchProbeRoute,
   ApiBenchJobIdNameRoute: ApiBenchJobIdNameRoute,
+  ApiBenchJobIdStatusRoute: ApiBenchJobIdStatusRoute,
   ApiBenchJobIdVerifyRoute: ApiBenchJobIdVerifyRoute,
 }
 export const routeTree = rootRouteImport

@@ -1,7 +1,7 @@
 import { readFile, unlink } from "node:fs/promises";
 import { join } from "node:path";
 import type { SpeechSpan } from "./parse";
-import { windowsCovering } from "./parse";
+import { windowsCovering, windowsForEar } from "./parse";
 import { pickWords } from "./transcript";
 import type { Hats } from "./hats";
 import type { PorchTake } from "./types";

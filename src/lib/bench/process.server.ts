@@ -1,4 +1,4 @@
-import { mkdir, writeFile, stat, readdir, readFile } from "node:fs/promises";
+import { mkdir, writeFile, stat, readdir, readFile, unlink } from "node:fs/promises";
 import { createReadStream } from "node:fs";
 import { join } from "node:path";
 import { Readable } from "node:stream";
@@ -15,12 +15,12 @@ import { runPorchOnWav } from "./porch";
 import { EMPTY_HATS, type Hats } from "./hats";
 import { digestFile } from "./hash";
 import { PORCH_GITHUB } from "@/lib/porch/types";
-import { ffmpegTimeoutMs, MAX_TAPE_BYTES, TAPE_TOO_LARGE } from "./limits";
+import { ffmpegTimeoutMs, MAX_TAPE_BYTES, OCR_BUDGET_MS, TAPE_TOO_LARGE } from "./limits";
 import { resolveFfmpeg, resolveFfprobe, runBin } from "./ffmpeg";
 import { writeStreamToFile } from "./write-tape";
 import { evidenceRoot, forensicFileEar, requireEvidenceRoot } from "./evidence";
 import { transcriptSrt, transcriptTxt, transcriptVtt } from "./transcript";
-import { ocrFrame, resolveTesseract, seeIntervalSec, stillTime } from "./see";
+import { ocrStills, seeIntervalSec, stillTime } from "./see";
 import type { BenchJob, CaseFile, Custody, Digest, DriftReport, ProcessStep, SceneCut, ScreenRead } from "./types";
 
 export type { BenchJob } from "./types";
@@ -175,9 +175,9 @@ function screenText(job: BenchJob) {
     `interval: ${job.see.intervalSec}s`,
     `stills: ${job.see.stills.length}`,
     "",
-    "OCR of sampled frames. Tesseract. Not Porch. Empty frame stays empty. No invented story.",
+    "OCR of sampled frames. Christman OCR (Paddle). Not Porch. Empty frame stays empty. No invented story.",
     "",
-    ...(lines.length ? lines : ["(no glyphs on sampled frames)"]),
+    ...(lines.length ? lines : ["(no text on sampled frames)"]),
     "",
     job.custody.disclaimer,
     "",
@@ -244,20 +244,51 @@ function reportText(job: BenchJob) {
   ].join("\n");
 }
 
-export async function processTape(
-  source: TapeSource,
-  hats: Hats = EMPTY_HATS,
-  caseFile: CaseFile = EMPTY_CASE,
-): Promise<BenchJob> {
+export type LandedTape = {
+  id: string;
+  dir: string;
+  bytes: number;
+  startedAt: string;
+  name: string;
+  mime: string;
+};
+
+export async function landTape(source: TapeSource): Promise<LandedTape> {
   if (source.size > MAX_TAPE_BYTES) throw new Error(TAPE_TOO_LARGE);
   requireEvidenceRoot();
   const startedAt = new Date().toISOString();
   const id = crypto.randomUUID();
   const dir = jobDir(id);
   await mkdir(dir, { recursive: true });
-  const originalPath = join(dir, "original.bin");
-  const bytes = await writeStreamToFile(source.body, originalPath);
+  const bytes = await writeStreamToFile(source.body, join(dir, "original.bin"));
   if (bytes === 0) throw new Error("Drop a tape.");
+  await writeFile(join(dir, "WORKING.txt"), `${source.name || "tape"}\n${startedAt}\n`);
+  return {
+    id,
+    dir,
+    bytes,
+    startedAt,
+    name: source.name || "tape",
+    mime: source.mime || "application/octet-stream",
+  };
+}
+
+export async function processTape(
+  source: TapeSource,
+  hats: Hats = EMPTY_HATS,
+  caseFile: CaseFile = EMPTY_CASE,
+): Promise<BenchJob> {
+  const landed = await landTape(source);
+  return finishLandedTape(landed, hats, caseFile);
+}
+
+export async function finishLandedTape(
+  landed: LandedTape,
+  hats: Hats = EMPTY_HATS,
+  caseFile: CaseFile = EMPTY_CASE,
+): Promise<BenchJob> {
+  const { id, dir, bytes, startedAt, name, mime } = landed;
+  const originalPath = join(dir, "original.bin");
   const log: ProcessStep[] = [];
 
   const version = await step(log, "ffmpeg", FFMPEG, ["-version"], 30_000);
@@ -371,37 +402,12 @@ export async function processTape(
     ],
     longMs,
   );
-  const tesseract = resolveTesseract();
-  const stills: ScreenRead[] = [];
-  const ocrStart = new Date().toISOString();
-  const tOcr = Date.now();
-  let lastText = "";
+  const stillNames: string[] = [];
   for (let i = 0; i < 720; i += 1) {
     const name = `see_${String(i + 1).padStart(4, "0")}.jpg`;
-    const path = join(dir, name);
-    if (!(await exists(path))) break;
-    const t = stillTime(i, intervalSec);
-    let text = "";
-    if (tesseract) {
-      try {
-        text = await ocrFrame(path, tesseract);
-      } catch {
-        text = "";
-      }
-    }
-    if (text && text === lastText) text = "";
-    if (text) lastText = text;
-    stills.push({ t, thumb: `/api/bench/${id}/${name}`, text });
+    if (!(await exists(join(dir, name)))) break;
+    stillNames.push(name);
   }
-  log.push({
-    n: log.length + 1,
-    tool: "see",
-    argv: ["tesseract", "stdout", `${stills.length} stills`, `${intervalSec}s`],
-    code: 0,
-    startedAt: ocrStart,
-    finishedAt: new Date().toISOString(),
-    elapsedMs: Date.now() - tOcr,
-  });
 
   const evidenceBytes = (await stat(evidencePath)).size;
   const porchBytes = (await exists(porchPath)) ? (await stat(porchPath)).size : 0;
@@ -434,6 +440,35 @@ export async function processTape(
     startedAt: porchStart,
     finishedAt: new Date().toISOString(),
     elapsedMs: Date.now() - tPorch,
+  });
+
+  const ocrStart = new Date().toISOString();
+  const tOcr = Date.now();
+  const ocrRows = stillNames.length ? await ocrStills(dir, OCR_BUDGET_MS) : [];
+  let lastText = "";
+  const stills: ScreenRead[] = stillNames.map((name, i) => {
+    const row = ocrRows.find((r) => r.file === name);
+    let text = (row?.text || "").replace(/\s+/g, " ").trim();
+    if (text && text === lastText) text = "";
+    if (text) lastText = text;
+    return { t: stillTime(i, intervalSec), thumb: `/api/bench/${id}/${name}`, text };
+  });
+  log.push({
+    n: log.length + 1,
+    tool: "see",
+    argv: [
+      "christman_ocr_shared.py",
+      "--frames",
+      dir,
+      "--json",
+      `${stills.length} stills`,
+      `${intervalSec}s`,
+      ocrRows.length ? "read" : "empty",
+    ],
+    code: ocrRows.length ? 0 : 1,
+    startedAt: ocrStart,
+    finishedAt: new Date().toISOString(),
+    elapsedMs: Date.now() - tOcr,
   });
 
   const custody: Custody = {
@@ -476,8 +511,8 @@ export async function processTape(
       fps: streams.fps,
       sampleRate: 48000,
       bytes,
-      name: source.name || "tape",
-      mime: source.mime || "application/octet-stream",
+      name,
+      mime,
     },
     wav: {
       evidence: `/api/bench/${id}/evidence.wav`,
@@ -537,6 +572,7 @@ export async function processTape(
   await writeFile(join(dir, "REPORT.txt"), reportText(job));
   await writeFile(join(dir, "DRIFT.txt"), driftText(job));
   await writeFile(join(dir, "SCREEN.txt"), screenText(job));
+  await unlink(join(dir, "WORKING.txt")).catch(() => undefined);
   jobs.set(id, job);
   return job;
 }
